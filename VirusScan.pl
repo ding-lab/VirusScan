@@ -1,22 +1,8 @@
-#########Song Cao###########
-
-#VirusScan_v2.2.pl
-#updated date: June 4 2014
-#use multiple cpu for blast search: v1.2
-#use multiple cpu for repeatmasker: v1.3
-# add bwa align to get mapped virus reads: v1.4
-# change num_threads to 4
-# remove phix sequence (gi:9626372) and Human endogenous retrovirus K113 (gi:548558394)
-# use unmapped reads for realignment: v1.7
-# fix problem for gi number: v1.8
-#use full virus db (98% identifty) extracted from nt for bwa aln: v1.9
-#v2.2.pl: consider bam aligned to both human and virus (with gi) 
  
 #!/usr/bin/perl
 use strict;
 use warnings;
 #use POSIX;
-my $version = 2.1;
 
 #color code
 my $red = "\e[31m";
@@ -307,17 +293,17 @@ if (($step_number == 0) || ($step_number == 14) || ($step_number>=22)) {
 	print REPRUN '	CHECK=$?',"\n";
 	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '		CHECK=$?',"\n";
 	print REPRUN "	done\n";
 	print REPRUN "else\n"; # file does not exist
-	print REPRUN "	".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "	".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '	grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '	CHECK=$?',"\n";
 	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '		CHECK=$?',"\n";
 	print REPRUN "	done\n";
@@ -988,7 +974,7 @@ sub parse_blast_N{
 	#if the parsed file exists, check the completeness of the parsed file
 	print PBN "	else\n";
    #     print PBN "             ".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "		".$run_script_path."check_Blast_parsed_file_date.pl \${PARSED}\n";
+	print PBN "		".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
 	print PBN '		CHECK=$?',"\n";
 	#check if parsed file is completed. If not correctly completed run and check again
 	print PBN '		while [ ${CHECK} -eq 10 ]',"\n";
@@ -1090,24 +1076,24 @@ sub report_for_each_sample{
 	print REP "#BSUB -w \"$hold_job_file\"","\n";	
 	############################
 	print REP "INPUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";#RepeatMasker QC output
-	print REP "REPORT=".$sample_full_path."/".$sample_name.".gi.v3.AssignmentReport\n";
+	print REP "REPORT=".$sample_full_path."/".$sample_name.".gi.AssignmentReport\n";
 	print REP 'if [ -f $REPORT ] ',"\n"; # report file exist 
 	print REP "then\n";
 	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
 	print REP '	CHECK=$?',"\n";
 	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
 	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
 	print REP '		CHECK=$?',"\n";
 	print REP "	done\n";
 	print REP "else\n"; # report file does not exist
-	print REP "	".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "	".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
 	print REP '	CHECK=$?',"\n";
 	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
 	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
 	print REP '		CHECK=$?',"\n";
 	print REP "	done\n";
@@ -1141,7 +1127,7 @@ sub summary_for_each_sample{
     print SUM "#BSUB -J $current_job_file\n";
 	print SUM "#BSUB -w \"$hold_job_file\"","\n";	
 	############################
-	print SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.v3.AssignmentSummary\n";
+	print SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.AssignmentSummary\n";
 	print SUM "BAD_SEQ=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.badSeq\n\n"; #output of RepeatMasker
 	print SUM 'if [ -f $OUTPUT ] ',"\n"; # summary file exist 
 	print SUM "then\n";
@@ -1149,17 +1135,17 @@ sub summary_for_each_sample{
 	print SUM '	CHECK=$?',"\n";
 	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '		CHECK=$?',"\n";
 	print SUM "	done\n";
 	print SUM "else\n"; # file does not exist
-	print SUM "	".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "	".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '	grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '	CHECK=$?',"\n";
 	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '		CHECK=$?',"\n";
 	print SUM "	done\n";
