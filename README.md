@@ -45,30 +45,55 @@ git clone https://github.com/ding-lab/VirusScan.git
 perl VirusScan.pl < run_folder > < step_number >
 
 [1] Extract unmapped no-human reads from aligned bam file and map extracted to virus database
+
 [2] Split files for RepeatMasker
+
 [3] Submit RepeatMasker job array
+
 [4] Sequence Quality Control
+
 [5] Split files for Blast Human Genome
+
 [6] Submit Blast Human Genome job array
+
 [7] Parse Human Genome Blast result
+
 [8] Pool and split files for BlastN
+
 [9] Submit BlastN job array
+
 [10] Parse BlastN result
+
 [11] Generate summary result for blastn output
+
 [12] Assignment report for each sample
+
 [13] Assignment summary for each sample
+
 [14] Generate report for the run
+
 [22] Run steps from 2 to 14
+
 [23] Run steps from 3 to 14
+
 [24] Run steps from 4 to 14
+
 [25] Run steps from 5 to 14
+
 [26] Run steps from 6 to 14
+
 [27] Run steps from 7 to 14
+
 [28] Run steps from 8 to 14
+
 [29] Run steps from 9 to 14
+
 [30] Run steps from 10 to 14
+
 [31] Run steps from 11 to 14
+
 [32] Run steps from 12 to 14
+
 [33] Run steps from 13 to 14 
 
 [1]. Identification of Novel Viruses Using VirusHunter -- An Automated Data Analysis Pipeline. Guoyan Zhao, Siddharth Krishnamurthy, Zhengqiu Cai, Vsevolod L. 
