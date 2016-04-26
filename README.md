@@ -4,7 +4,7 @@
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
 and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
 
-It was developed from VirusHunter pipeline [2], which focuses on identification of known viruses for 454 reads. 
+It was developed from VirusHunter pipeline [2], which focuses on identification of novel viruses for 454 reads. 
 Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and can return 
 the discovery of known viruses from sequencing data very fast.  
 
