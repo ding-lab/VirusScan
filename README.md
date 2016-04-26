@@ -2,41 +2,25 @@
 ### released on Apr 25, 2016####
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
-and accurate detection of known viruses from NGS data. It works on LSF job scheduler. 
+and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
 
-It was developed from VirusHunter pipeline [1], which focuses on identification of known viruses for 454 reads. 
+It was developed from VirusHunter pipeline [2], which focuses on identification of known viruses for 454 reads. 
 Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and can return 
 the discovery of known viruses from sequencing data very fast.  
 
 Dependencies:
 
-1. RepeatMasker:
+1. RepeatMasker: Download and install RepeatMasker from http://www.repeatmasker.org/RMDownload.html
 
-Download and install RepeatMasker from http://www.repeatmasker.org/RMDownload.html
+2. BLAST Module: Download and install BLAST from ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/
 
-2. BLAST Module:
+3. MySQL DBI: See http://search.cpan.org/dist/DBI/. DBI may be included with your Linux distribution by default. This is a Perl module that allows Perl to interact directly with MySQL database.
 
-Download and install BLAST from ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/
+4. BioPerl: See http://www.bioperl.org/wiki/Getting_BioPerl. BioPerl is used for parsing BLAST output files, and to construct taxonomy lineage tree from a taxonomy ID.  
 
-3. MySQL DBI:
+5. NCBI nt database: Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/
 
-See http://search.cpan.org/dist/DBI/
-
-DBI may be included with your Linux distribution by default. This is a Perl module that allows Perl to interact directly with MySQL database.
-
-4. BioPerl:
-
-See http://www.bioperl.org/wiki/Getting_BioPerl
-
-BioPerl is used for parsing BLAST output files, to construct taxonomy lineage tree from a taxonomy ID.  
-
-5. NCBI nt database:
-
-Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/
-
-6. NCBI taxonomy database:
-
-Download NCBI taxonomy database from ftp://ftp.ncbi.nih.gov/pub/taxonomy/; See http://pathology.wustl.edu/VirusHunter/ for how to create taxonomy database. 
+6. NCBI taxonomy database: Download NCBI taxonomy database from ftp://ftp.ncbi.nih.gov/pub/taxonomy/; See http://pathology.wustl.edu/VirusHunter/ for how to create taxonomy database. 
 
 Usage: 
 
@@ -96,5 +80,7 @@ perl VirusScan.pl < run_folder > < step_number >
 
 [33] Run steps from 13 to 14 
 
-[1]. Identification of Novel Viruses Using VirusHunter -- An Automated Data Analysis Pipeline. Guoyan Zhao, Siddharth Krishnamurthy, Zhengqiu Cai, Vsevolod L. 
+1. Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, submitted. 
+
+2. Identification of Novel Viruses Using VirusHunter -- An Automated Data Analysis Pipeline. Guoyan Zhao, Siddharth Krishnamurthy, Zhengqiu Cai, Vsevolod L. 
 Popov, Amelia P. Travassos da Rosa, Hilda Guzman, Song Cao, Herbert W. Virgin, Robert B. Tesh and David Wang, PLoS One. 2013. 8(10):e78470. 
