@@ -42,7 +42,7 @@ step_number: Integer between 1 and 33 which represents the following step:
 
 [1] Extract unmapped no-human reads from aligned bam file and map extracted reads to the viral database
 
-[2] Split files for RepeatMasker
+[2] Split files for running RepeatMasker
 
 [3] Submit RepeatMasker job array
 
