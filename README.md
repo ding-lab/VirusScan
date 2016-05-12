@@ -2,7 +2,7 @@
 
 Author: Song Cao
 
-### Released on Apr 25, 2016####
+Released on Apr 25, 2016
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
 and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
