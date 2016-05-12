@@ -94,5 +94,3 @@ step_number: Integer between 1 and 33 which represents the following step:
 
 1. Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, submitted. 
 
-2. Identification of Novel Viruses Using VirusHunter -- An Automated Data Analysis Pipeline. Guoyan Zhao, Siddharth Krishnamurthy, Zhengqiu Cai, Vsevolod L. 
-Popov, Amelia P. Travassos da Rosa, Hilda Guzman, Song Cao, Herbert W. Virgin, Robert B. Tesh and David Wang, PLoS One. 2013. 8(10):e78470. 
