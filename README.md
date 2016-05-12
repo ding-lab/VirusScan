@@ -28,7 +28,16 @@ git clone https://github.com/ding-lab/VirusScan.git
 
 perl VirusScan.pl < run_folder > < step_number >
 
-[1] Extract unmapped no-human reads from aligned bam file and map extracted to virus database
+run_folder: A folder contains different bam files for different samples: 
+For example: 
+work/sample1/sample1.bam 
+work/sample2/sample2.bam
+
+Warning: The prefix of the name of the bam file should be the same as the sample directory.
+
+step_number: Integer between 1 and 33 which represents the following step: 
+
+[1] Extract unmapped no-human reads from aligned bam file and map extracted reads to the viral database
 
 [2] Split files for RepeatMasker
 
