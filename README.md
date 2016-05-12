@@ -1,5 +1,7 @@
 #### VirusScan version 1.1 ####
-#### Author: Song Cao ######
+
+Author: Song Cao
+
 ### Released on Apr 25, 2016####
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
