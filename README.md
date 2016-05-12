@@ -31,6 +31,7 @@ perl VirusScan.pl < run_folder > < step_number >
 run_folder: A folder contains different bam files for different samples: 
 For example: 
 work/sample1/sample1.bam 
+
 work/sample2/sample2.bam
 
 Warning: The prefix of the name of the bam file should be the same as the sample directory.
