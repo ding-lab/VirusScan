@@ -15,7 +15,7 @@ my $normal = "\e[0m";
 
 #usage information
 (my $usage = <<OUT) =~ s/\t+//g;
-This script will run the virus discovery pipeline on Sun Grid Engine.
+This script will run the virus discovery pipeline on LSF cluster.
 Pipeline version: $version
 $yellow		Usage: perl $0 <run_folder> <step_number> $normal
 
@@ -57,7 +57,7 @@ my $email = "scao\@wustl\.edu";
 #my $cd_hit = "/gscuser/mboolcha/software/cdhit/cd-hit-est";
 my $repeat_masker = "RepeatMasker";
 my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
-my $blastx = "/gscuser/scao/tools/software/ncbi-blast+/bin/blastx";
+#my $blastx = "/gscuser/scao/tools/software/ncbi-blast+/bin/blastx";
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # path and name of databases
