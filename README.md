@@ -8,8 +8,8 @@ VirusScan pipeline is a fully automated and modular software package designed fo
 and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
 
 It was developed from VirusHunter pipeline, which focuses on identification of novel viruses for 454 reads. 
-Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and can return 
-the discovery of known viruses from sequencing data very fast.  
+Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and can fastly return 
+the discovery result of known viruses.  
 
 Dependencies:
 
@@ -19,7 +19,7 @@ Dependencies:
 
 3. MySQL DBI: See http://search.cpan.org/dist/DBI/. DBI may be included with your Linux distribution by default. This is a Perl module that allows Perl to interact directly with MySQL database.
 
-4. BioPerl: See http://www.bioperl.org/wiki/Getting_BioPerl. BioPerl is used for parsing BLAST output files, and to construct taxonomy lineage tree from a taxonomy ID.  
+4. BioPerl: See http://bioperl.org/. BioPerl is used for parsing BLAST output files, and to construct taxonomy lineage tree from a taxonomy ID.  
 
 5. NCBI nt database: Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/
 
@@ -95,5 +95,7 @@ step_number: Integer between 1 and 33 which represents the following step:
 
 [33] Run steps from 13 to 14 
 
-1. Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, submitted. 
+Please cite the following paper for VirusScan pipeline:
+
+1. Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues (2016), 6:28294. 
 
