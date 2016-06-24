@@ -8,11 +8,11 @@ Released on Apr 25, 2016
 
 Please cite the following paper for VirusScan pipeline:
 
-Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294.
+<font size="4">Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294. </font>
 
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
-and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
+and accurate detection of known viruses from NGS data. It works on LSF job scheduler. 
 
 It was developed from VirusHunter pipeline, which focuses on identification of novel viruses for 454 reads. 
 Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and fastly return 
