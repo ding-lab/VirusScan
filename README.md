@@ -2,6 +2,8 @@
 
 Author: Song Cao
 
+Contact: scao@wustl.edu
+
 Released on Apr 25, 2016
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
