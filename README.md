@@ -8,8 +8,7 @@ Released on Apr 25, 2016
 
 Please cite the following paper for VirusScan pipeline:
 
-<font size="4">Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294. </font>
-
+Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294. 
 
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
 and accurate detection of known viruses from NGS data. It works on LSF job scheduler. 
@@ -18,23 +17,23 @@ It was developed from VirusHunter pipeline, which focuses on identification of n
 Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and fastly return 
 the discovery result of known viruses.  
 
-Dependencies:
+###Dependencies:###
 
-1. RepeatMasker: Download and install RepeatMasker from http://www.repeatmasker.org/RMDownload.html
 
-2. BLAST Module: Download and install BLAST from ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/
+
+1. RepeatMasker: Download and install RepeatMasker from http://www.repeatmasker.org/RMDownload.html.
+
+2. BLAST Module: Download and install BLAST from ftp://ftp.ncbi.nlm.nih.gov/blast/executables/LATEST/.
 
 3. MySQL DBI: See http://search.cpan.org/dist/DBI/. DBI may be included with your Linux distribution by default. This is a Perl module that allows Perl to interact directly with MySQL database.
 
 4. BioPerl: See http://bioperl.org/. BioPerl is used for parsing BLAST output files, and to construct taxonomy lineage tree from a taxonomy ID.  
 
-5. NCBI nt database: Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/
+5. NCBI nt database: Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/.
 
 6. NCBI taxonomy database: Download NCBI taxonomy database from ftp://ftp.ncbi.nih.gov/pub/taxonomy/. 
 
-
-6.1. Create a directory to hold taxonomy file, e.g. taxdump_2016_06_20
-Download taxdump.tar.gz file to the directory and Try "unzip taxdump.tar.gz" to unzip the file. 
+6.1. Create a directory to hold taxonomy file, e.g. taxdump_2016_06_20. Download taxdump.tar.gz file to the directory and Type "tar -xzf taxdump.tar.gz" to untar the file. 
 
 6.2. Create MySQL Database for the taxonomy information
 
@@ -58,7 +57,7 @@ Cat import_gi_taxid_nucl.sql | mysql -h hostname --user=username databaseName --
 
 Warning: This can take a very long time. It is better to run it as a background task. 
 
-Usage: 
+###Usage:###
 
 git clone https://github.com/ding-lab/VirusScan.git
 
