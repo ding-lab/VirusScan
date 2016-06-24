@@ -6,6 +6,11 @@ Contact: scao@wustl.edu
 
 Released on Apr 25, 2016
 
+Please cite the following paper for VirusScan pipeline:
+
+Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294.
+
+
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
 and accurate detection of known viruses from NGS data [1]. It works on LSF job scheduler. 
 
@@ -122,8 +127,4 @@ step_number: Integer between 1 and 33 which represents the following step:
 [32] Run steps from 12 to 14
 
 [33] Run steps from 13 to 14 
-
-Please cite the following paper for VirusScan pipeline:
-
-1. Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Reyka Jayasinghe, Mingchao Xie, Song Wu, Beifang Niu, Robert Grubb III, Kimberly J. Johnson, Hiram Gay, Ken Chen, Janet S. Rader,  John F. Dipersio, Feng Chen, and Li Ding, Divergent viral presentation among human tumors and adjacent normal tissues, Scientific Reports, 2016, 6:28294. 
 
