@@ -31,11 +31,13 @@ the discovery result of known viruses.
 
 5. NCBI nt database: Download NT database from ftp://ftp.ncbi.nih.gov/blast/db/.
 
-6. NCBI taxonomy database: Download NCBI taxonomy database from ftp://ftp.ncbi.nih.gov/pub/taxonomy/. 
+6. Viral nt database: Downlaod viral nt database from https://drive.google.com/open?id=0B-teklYT0wbDMEh6ZlhzMVo2QlE.
 
-6.1. Create a directory to hold taxonomy file, e.g. taxdump_2016_06_20. Download taxdump.tar.gz file to the directory and Type "tar -xzf taxdump.tar.gz" to untar the file. 
+7. NCBI taxonomy database: Download NCBI taxonomy database from ftp://ftp.ncbi.nih.gov/pub/taxonomy/. 
 
-6.2. Create MySQL Database for the taxonomy information
+7.1. Create a directory to hold taxonomy file, e.g. taxdump_2016_06_20. Download taxdump.tar.gz file to the directory and Type "tar -xzf taxdump.tar.gz" to untar the file. 
+
+7.2. Create MySQL Database for the taxonomy information
 
 Ask your MySQL database administrator to create a MySQL database for taxonomy information, and grant privileges on this database to a suitable username. 
 For example, ask your MySQL database administrator to use following commands to create a database named "vs_taxondb" and grant all privileges to the user "vs_taxonUser" with the password "vs_password".
