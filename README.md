@@ -19,7 +19,7 @@ git clone https://github.com/ding-lab/VirusScan.git
 git checkout simplified
 
 
-** submit jobs in the directory that contain VirusScan scripts
+## submit jobs in the directory that contains VirusScan scripts ##
 
 Usage: perl VirusScan.pl  --rdir --log --step 
 
