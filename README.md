@@ -18,6 +18,21 @@ A simplified version of VirusScan, no dependency on taxonomy database. A customi
 git clone https://github.com/ding-lab/VirusScan.git
 git checkout simplified
 
+change ./source/path_tools.tsv for the software directory (samtools, bwa, bamtools) in your system. 
+
+##Install third-party tools (samtools, bwa, bamtools)##
+
+1. Install anaconda  
+
+wget https://repo.anaconda.com/archive/Anaconda2-5.3.1-Linux-x86_64.sh
+
+2. Install samtools, bwa, bamtools
+
+conda install -c bioconda samtools
+
+conda install -c bioconda bwa
+
+conda install -c bioconda bamtools
 
 ## submit jobs in the directory that contains VirusScan scripts ##
 
