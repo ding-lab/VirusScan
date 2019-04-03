@@ -1,8 +1,23 @@
+#########Song Cao###########
+
+#VirusScan_v2.2.pl
+#updated date: June 4 2014
+#use multiple cpu for blast search: v1.2
+#use multiple cpu for repeatmasker: v1.3
+# add bwa align to get mapped virus reads: v1.4
+# change num_threads to 4
+# remove phix sequence (gi:9626372) and Human endogenous retrovirus K113 (gi:548558394)
+# use unmapped reads for realignment: v1.7
+# fix problem for gi number: v1.8
+#use full virus db (98% identifty) extracted from nt for bwa aln: v1.9
+#v2.2.pl: consider bam aligned to both human and virus (with gi) 
  
 #!/usr/bin/perl
 use strict;
 use warnings;
 #use POSIX;
+
+my $version = "katmai_v1.1";
 
 #color code
 my $red = "\e[31m";
@@ -15,7 +30,7 @@ my $normal = "\e[0m";
 
 #usage information
 (my $usage = <<OUT) =~ s/\t+//g;
-This script will run the virus discovery pipeline on LSF cluster.
+This script will run the virus discovery pipeline on Sun Grid Engine.
 Pipeline version: $version
 $yellow		Usage: perl $0 <run_folder> <step_number> $normal
 
@@ -23,13 +38,8 @@ $yellow		Usage: perl $0 <run_folder> <step_number> $normal
 
 <step_number> run this pipeline step by step. (running the whole pipeline if step number is 0)
 
-$green		[1]  Run bwa
-$red		[2, or <=22]  Split files for RepeatMasker
-			[3 or <=23]  Submit RepeatMasker job array
-$yellow		[4 or <=24]  Sequence Qulity Control
-$green		[5 or <=25]  Split files for Blast Reference Genome
-			[6 or <=26]  Submit Blast Reference Genome job array
-			[7 or <=27]  Parse Reference Genome Blast result
+$green		[1]  Run bwa for unmapped reads
+
 $gray		[8 or <=28]  Pool and split files for BlastN
 			[9 or <=29]  Submit BlastN job array
 			[10 or <=30] Parse BlastN result
@@ -53,11 +63,11 @@ die $usage unless ($step_number >=0)&&(($step_number <= 17) || ($step_number >= 
 # values need to be modified to adapt to local environment
 my $email = "scao\@wustl\.edu";
 
+my $samtools="/diskmnt/Software/samtools-1.2/samtools";
+my $bwa="/diskmnt/Software/bwa-0.7.17/bwa";
+my $bamtools="/home/scao/tools/anaconda2/bin/bamtools";
 # software path
 #my $cd_hit = "/gscuser/mboolcha/software/cdhit/cd-hit-est";
-my $repeat_masker = "RepeatMasker";
-my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
-#my $blastx = "/gscuser/scao/tools/software/ncbi-blast+/bin/blastx";
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 # path and name of databases
@@ -65,13 +75,9 @@ my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
 #my $db_BX = "/gscuser/scao/gc3027/nr/nr";
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
-my $db_BN = "/gscmnt/gc3027/dinglab/medseq/nt/nt";
-my $db_BX = "/gscmnt/gc3027/dinglab/medseq/nr/nr";
-my $bwa_ref = "/gscmnt/gc3027/dinglab/medseq/fasta/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
 
 # reference genome taxonomy classification and database location.
 # It's better to change $refrence_genome_taxonomy and $reference_genome based on the data being analyzed.
-my $refrence_genome_taxonomy = "";
 my $reference_genome = "";
 
 #if ($ref_genome_choice == 1) {
@@ -80,10 +86,6 @@ my $reference_genome = "";
 	# path to the reference genome	
 #	$reference_genome = "/gscmnt/gc3027/dinglab/medseq/human70.37/humandnacdna.fa";
 #}
-
-$refrence_genome_taxonomy = "Homo";
-
-$reference_genome = "/gscmnt/gc3027/dinglab/medseq/human70.37/humandnacdna.fa";
 
 #####################################################################################
 # everything else below should be automated
@@ -97,29 +99,21 @@ my $working_name= (split(/\//,$run_dir))[-2];
 # The number of files should be determined accourding to CPUs available in the computer
 # cluster.
 
-# The number of small fasta files to split to from a large file for RepeatMasker
-my $file_number_of_RepeatMasker = 100; #default 
-# the number of small fasta files to split to from a large file for Blast_Reference_Genome
-my $file_number_of_Blast_Ref_Genome = 100; #default
-# the number of small fasta files to split to from a large file for Blast_N
-my $file_number_of_Blast_N = 100; #default
-# the number of small fasta files to split to from a large file for Blast_X
-#my $file_number_of_Blast_X = 200; #default
+
+my $HOME1="/diskmnt/Projects/Users/scao/projects";
 
 #store job files here
-my $HOME1="/gscmnt/gc2524/dinglab";
-
-#store job files here
-if (! -d $HOME1."/tmp") {
-    `mkdir $HOME1"/tmp"`;
+if (! -d $HOME1."/tmpvirus") {
+    `mkdir $HOME1"/tmpvirus"`;
 }
-my $job_files_dir = $HOME1."/tmp";
+my $job_files_dir = $HOME1."/tmpvirus";
 
 #store SGE output and error files here
-if (! -d $HOME1."/SGE_DIR") {
-    `mkdir $HOME1"/SGE_DIR"`;
+if (! -d $HOME1."/LSF_DIR_VIRUS") {
+    `mkdir $HOME1"/LSF_DIR_VIRUS"`;
 }
-my $lsf_file_dir = $HOME1."/SGE_DIR";
+
+my $lsf_file_dir = $HOME1."/LSF_DIR_VIRUS";
 
 # obtain script path
 my $run_script_path = `dirname $0`;
@@ -293,17 +287,17 @@ if (($step_number == 0) || ($step_number == 14) || ($step_number>=22)) {
 	print REPRUN '	CHECK=$?',"\n";
 	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "		".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '		CHECK=$?',"\n";
 	print REPRUN "	done\n";
 	print REPRUN "else\n"; # file does not exist
-	print REPRUN "	".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "	".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '	grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '	CHECK=$?',"\n";
 	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
+	print REPRUN "		".$run_script_path."generate_final_report_gi_v3.pl ".$run_dir." ".$version,"\n";
 	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
 	print REPRUN '		CHECK=$?',"\n";
 	print REPRUN "	done\n";
@@ -387,7 +381,7 @@ sub bsub_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
 
-    $current_job_file = "j1_bwa_".$sample_name.$$.".sh";
+    $current_job_file = "j1_bwa_".$sample_name.".sh";
 
     my $IN_bam = $sample_full_path."/".$sample_name.".bam";
 
@@ -403,20 +397,28 @@ sub bsub_bwa{
         die "Warning: Died because $IN_bam is empty!", $normal, "\n\n";
     }
 
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+
     open(BWA, ">$job_files_dir/$current_job_file") or die $!;
     print BWA "#!/bin/bash\n";
-    print BWA "#BSUB -n 1\n";
-    print BWA "#BSUB -R \"rusage[mem=20000]\"","\n";
-    print BWA "#BSUB -M 20000000\n";
-    print BWA "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print BWA "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print BWA "#BSUB -J $current_job_file\n";
+   # print BWA "#BSUB -n 1\n";
+   # print BWA "#BSUB -R \"rusage[mem=20000]\"","\n";
+   # print BWA "#BSUB -M 20000000\n";
+   # print BWA "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
+   # print BWA "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
+   # print BWA "#BSUB -J $current_job_file\n";
     print BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
     print BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
     print BWA "BWA_sai=".$sample_full_path."/".$sample_name.".sai\n";
-    #print BWA "BWA_sam=".$sample_full_path."/".$sample_name.".sam\n";
+    print BWA "BWA_sam=".$sample_full_path."/".$sample_name.".sam\n";
+    print BWA "BWA_bam=".$sample_full_path."/".$sample_name.".remapped.bam\n"; 
     #print BWA "BWA_bam=".$sample_full_path."/".$sample_name.".realign.bam\n";
     #print BWA "BWA_mapped_bam=".$sample_full_path."/".$sample_name.".mapped.bam\n";
+ 
     print BWA "BWA_mapped=".$sample_full_path."/".$sample_name.".mapped.reads\n";
     print BWA "BWA_fa=".$sample_full_path."/".$sample_name.".fa\n";
 	#print BWA 
@@ -430,25 +432,43 @@ sub bsub_bwa{
 	#0x800: supplementary alignment
     #H: Hard clipping
 	#S: Soft clipping
-	print BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
+     print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
+
+     #print BWA "$samtools view -f 4 \${BWA_IN} | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";	
     #print BWA "bwa aln $bwa_ref -b0 \${BWA_IN} > \${BWA_sai} \&","\n";	
-    print BWA "bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
-    print BWA 'rm ${BWA_fq}',"\n";
-	print BWA "mkfifo \${BWA_fq}","\n";
-    print BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
+     print BWA "$bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
+     print BWA 'rm ${BWA_fq}',"\n";
+     print BWA "mkfifo \${BWA_fq}","\n";
+     print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
 	#print BWA "samtools view -h \${BWA_IN} | gawk \'{if (substr(\$1,1,1)==\"\@\" || (and(\$2,0x4) || and(\$2,0x8) )) print}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
-	print BWA "bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} | grep -v \@SQ | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
-	print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
-    print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-	print BWA 'rm ${BWA_sai}',"\n";
-	print BWA 'rm ${BWA_fq}',"\n";
-	print BWA "else\n";
-    print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
-    print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
+    # print BWA "$samtools view -f 4 \${BWA_IN} | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
+     print BWA "$bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} > \${BWA_sam}","\n";  	
+     print BWA "grep -v \@SQ \${BWA_sam} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
+     print BWA "$samtools view -bT $bwa_ref \${BWA_sam} > \${BWA_bam}","\n"; 
+	#print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
+    #print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
+     print BWA 'rm ${BWA_sam}',"\n";
+     print BWA 'rm ${BWA_sai}',"\n";
+	#print BWA 'rm ${BWA_fq}',"\n";
+	#print BWA "else\n";
+    #print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
+    #print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
     print BWA "   fi\n";
     close BWA;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-    system ( $bsub_com );
+
+    #my $sh_file=$job_files_dir."/".$current_job_file;
+    #$bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
+    #system ( $bsub_com );
+ 
+        my $sh_file=$job_files_dir."/".$current_job_file;
+
+        $bsub_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
+        print $bsub_com;
+        system ($bsub_com);
+
+
+   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    #system ( $bsub_com );
 }
 
 #####################################################################################
@@ -462,15 +482,21 @@ sub split_for_RepeatMasker {
 		$hold_job_file = $current_job_file;
 	}
 	$current_job_file = "j2_".$sample_name."_RM_split_".$$.".sh";
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    if(-e $lsf_out) { `rm $lsf_out`; }
+    if(-e $lsf_err) { `rm $lsf_err`; }
+
 	open(RMSPLIT, ">$job_files_dir/$current_job_file") or die $!;
 	print RMSPLIT "#!/bin/bash\n";
-	print RMSPLIT "#BSUB -n 1\n";
+#	print RMSPLIT "#BSUB -n 1\n";
     #print RMSPLIT "#BSUB -q ding-lab\n";
-	print RMSPLIT "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print RMSPLIT "#BSUB -M 10000000\n";
-    print RMSPLIT "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RMSPLIT "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RMSPLIT "#BSUB -J $current_job_file\n";
+#	print RMSPLIT "#BSUB -R \"rusage[mem=10000]\"","\n";
+ #   print RMSPLIT "#BSUB -M 10000000\n";
+  #  print RMSPLIT "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
+  #  print RMSPLIT "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
+  #  print RMSPLIT "#BSUB -J $current_job_file\n";
 	print RMSPLIT "RMSPLIT_IN=".$sample_full_path."/".$sample_name.".fa\n";
 	print RMSPLIT "#BSUB -w \"$hold_job_file\"","\n";	
 	#####################
@@ -500,9 +526,15 @@ sub split_for_RepeatMasker {
 	print RMSPLIT "	done\n";
 	print RMSPLIT "fi\n";
 	close RMSPLIT;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";	
-	#$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+
+    my $sh_file=$job_files_dir."/".$current_job_file;
+#    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+ #   system ( $bsub_com );
+    $bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -o $lsf_out -e $lsf_err -J $current_job_file -w \"$hold_job_file\" sh $sh_file\n";
+   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    system ( $bsub_com );
+
+
 }
 
 #####################################################################################
@@ -515,18 +547,26 @@ sub submit_job_array_RM {
 	}else{
 		$hold_job_file = $current_job_file;
 	}
-	$current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
+#	$current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
+    $current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
+
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    if(-e $lsf_out) { `rm $lsf_out`; }
+    if(-e $lsf_err) { `rm $lsf_err`; }
+
 	open (RM, ">$job_files_dir/$current_job_file") or die $!;
 	print RM "#!/bin/bash\n";
-	print RM "#BSUB -n 1\n";
+	#print RM "#BSUB -n 1\n";
 	#print RM "#BSUB -q ding-lab\n";
-	print RM "#BSUB -R \"span[hosts=1] rusage[mem=10000]\"","\n";
+	#print RM "#BSUB -R \"span[hosts=1] rusage[mem=10000]\"","\n";
     #print RM "#BSUB -R \"rusage[mem=40000]\"","\n";
-    print RM "#BSUB -M 10000000\n";
-    print RM "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RM "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RM "#BSUB -J $current_job_file\[1-$file_number_of_RepeatMasker\]\n";
-	print RM "#BSUB -w \"$hold_job_file\"","\n";	
+    #print RM "#BSUB -M 10000000\n";
+    #print RM "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
+    #print RM "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
+    #print RM "#BSUB -J $current_job_file\[1-$file_number_of_RepeatMasker\]\n";
+	#print RM "#BSUB -w \"$hold_job_file\"","\n";	
 	print RM "RM_IN=".$sample_full_path."/".$sample_name.".fa\n";
 	#####################
 	print RM "RM_dir=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
@@ -556,10 +596,16 @@ sub submit_job_array_RM {
 	print RM "	fi\n";
 	print RM "fi\n";
 	close RM;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
 	#print $bsub_com, "\n";
         #$bsub_com = "qsub -V -l h_vmem=4G  -hold_jid $hold_job_file,$hold_RM_job -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com)
+	#system ($bsub_com)
+    my $sh_file=$job_files_dir."/".$current_job_file;
+#    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+ #   system ( $bsub_com );
+    $bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file\[1-$file_number_of_RepeatMasker\] -w \"$hold_job_file\" -o $lsf_out -e $lsf_err sh $sh_file\n";
+    system ($bsub_com)
+
 }
 
 #####################################################################################
@@ -572,15 +618,21 @@ sub seq_QC {
 		$hold_job_file = $current_job_file;
 	}
 	$current_job_file = "j4_".$sample_name."_QC_".$$.".sh";
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    if(-e $lsf_out) { `rm $lsf_out`; }
+    if(-e $lsf_err) { `rm $lsf_err`; }
+
 	open(QC, ">$job_files_dir/$current_job_file") or die $!;
 	print QC "#!/bin/bash\n";
-    print QC "#BSUB -n 1\n";
-    print QC "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print QC "#BSUB -M 10000000\n";
-    print QC "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print QC "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print QC "#BSUB -J $current_job_file\n";
-	print QC "#BSUB -w \"$hold_job_file\"","\n";	
+#    print QC "#BSUB -n 1\n";
+ #   print QC "#BSUB -R \"rusage[mem=10000]\"","\n";
+ #   print QC "#BSUB -M 10000000\n";
+ #   print QC "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
+ #   print QC "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
+ #   print QC "#BSUB -J $current_job_file\n";
+#	print QC "#BSUB -w \"$hold_job_file\"","\n";	
 	#####################
 	print QC "SAMPLE_DIR=".$sample_full_path."\n";
 	print QC "QC_OUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n\n";
@@ -609,9 +661,14 @@ sub seq_QC {
     print QC "	done\n";
 	print QC "fi\n";
 	close QC;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+     my $sh_file=$job_files_dir."/".$current_job_file;
+#    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+ #   system ( $bsub_com );
+    $bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -w \"$hold_job_file\" -o $lsf_out -e $lsf_err sh $sh_file\n";
+   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    system ( $bsub_com );
+
+
 }
 
 #####################################################################################
@@ -625,16 +682,22 @@ sub split_for_blast_RefG{
 		$hold_job_file = $current_job_file;
 	}
 
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    if(-e $lsf_out) { `rm $lsf_out`; }
+    if(-e $lsf_err) { `rm $lsf_err`; }
+
 	$current_job_file = "j5_".$sample_name."_RefG_split_".$$.".sh";
 	open(RefGS, ">$job_files_dir/$current_job_file") or die $!;
 	print RefGS "#!/bin/bash\n";
-	print RefGS "#BSUB -n 1\n";
-    print RefGS "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print RefGS "#BSUB -M 10000000\n";
-    print RefGS "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RefGS "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RefGS "#BSUB -J $current_job_file\n";
-	print RefGS "#BSUB -w \"$hold_job_file\"","\n";	
+	#print RefGS "#BSUB -n 1\n";
+    #print RefGS "#BSUB -R \"rusage[mem=10000]\"","\n";
+    #print RefGS "#BSUB -M 10000000\n";
+    #print RefGS "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
+    #print RefGS "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
+    #print RefGS "#BSUB -J $current_job_file\n";
+	#print RefGS "#BSUB -w \"$hold_job_file\"","\n";	
 	############################
 	print RefGS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
 	print RefGS "SAMPLE_DIR=".$sample_full_path."\n\n";
@@ -662,9 +725,14 @@ sub split_for_blast_RefG{
 	print RefGS "	done\n";
 	print RefGS "fi\n";
 	close RefGS;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
+	#$bsub_com = "bsub < $job_files_dir/$current_job_file";
 	#$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+	#system ($bsub_com);
+my $sh_file=$job_files_dir."/".$current_job_file;
+    $bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -w \"$hold_job_file\" -o $lsf_out -e $lsf_err sh $sh_file\n";
+   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    system ( $bsub_com );
+
 }
 
 #####################################################################################
@@ -974,7 +1042,7 @@ sub parse_blast_N{
 	#if the parsed file exists, check the completeness of the parsed file
 	print PBN "	else\n";
    #     print PBN "             ".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "		".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
+	print PBN "		".$run_script_path."check_Blast_parsed_file_date.pl \${PARSED}\n";
 	print PBN '		CHECK=$?',"\n";
 	#check if parsed file is completed. If not correctly completed run and check again
 	print PBN '		while [ ${CHECK} -eq 10 ]',"\n";
@@ -1076,24 +1144,24 @@ sub report_for_each_sample{
 	print REP "#BSUB -w \"$hold_job_file\"","\n";	
 	############################
 	print REP "INPUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";#RepeatMasker QC output
-	print REP "REPORT=".$sample_full_path."/".$sample_name.".gi.AssignmentReport\n";
+	print REP "REPORT=".$sample_full_path."/".$sample_name.".gi.v3.AssignmentReport\n";
 	print REP 'if [ -f $REPORT ] ',"\n"; # report file exist 
 	print REP "then\n";
 	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
 	print REP '	CHECK=$?',"\n";
 	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
 	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "		".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
 	print REP '		CHECK=$?',"\n";
 	print REP "	done\n";
 	print REP "else\n"; # report file does not exist
-	print REP "	".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "	".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
 	print REP '	CHECK=$?',"\n";
 	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
 	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
+	print REP "		".$run_script_path."assignment_report_virus_gi_v3.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
 	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
 	print REP '		CHECK=$?',"\n";
 	print REP "	done\n";
@@ -1127,7 +1195,7 @@ sub summary_for_each_sample{
     print SUM "#BSUB -J $current_job_file\n";
 	print SUM "#BSUB -w \"$hold_job_file\"","\n";	
 	############################
-	print SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.AssignmentSummary\n";
+	print SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.v3.AssignmentSummary\n";
 	print SUM "BAD_SEQ=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.badSeq\n\n"; #output of RepeatMasker
 	print SUM 'if [ -f $OUTPUT ] ',"\n"; # summary file exist 
 	print SUM "then\n";
@@ -1135,17 +1203,17 @@ sub summary_for_each_sample{
 	print SUM '	CHECK=$?',"\n";
 	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "		".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '		CHECK=$?',"\n";
 	print SUM "	done\n";
 	print SUM "else\n"; # file does not exist
-	print SUM "	".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "	".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '	grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '	CHECK=$?',"\n";
 	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
 	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
+	print SUM "		".$run_script_path."assignment_summary_gi_v3.pl ".$sample_full_path." \${BAD_SEQ}\n";
 	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
 	print SUM '		CHECK=$?',"\n";
 	print SUM "	done\n";
