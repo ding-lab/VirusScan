@@ -10,7 +10,7 @@ use Getopt::Long;
 
 #use POSIX;
 
-my $version = "katmai_v1.1";
+my $version = "_simplified_v1.0";
 
 #color code
 my $red = "\e[31m";
@@ -31,11 +31,13 @@ $yellow Usage: perl $0  --rdir --log --step $normal
 
 <rdir> = full path of the folder holding files for this sequence run
 
+<log> = directory for log files 
+
 <step> run this pipeline step by step. (running the whole pipeline if step number is 0)
 
-<tf> file for third-party tools, including bwa, samtools, bamtools.  
 
-$green		[1]  Run bwa for unmapped reads
+$green		 [1]  Run bwa for unmapped reads againt virus reference
+$purple [2]  Generate summary for virus discovery
 
 $normal
 OUT
@@ -138,7 +140,7 @@ $run_script_path = "/usr/bin/perl ".$run_script_path."/";
 my $hold_RM_job = "norm"; 
 my $current_job_file = "";#cannot be empty
 my $hold_job_file = "";
-my $bsub_com = "";
+my $nohup_com = "";
 my $sample_full_path = "";
 my $sample_name = "";
 
@@ -161,16 +163,13 @@ if ($step_number<2) {
 			if (-d $sample_full_path) { # is a full path directory containing a sample
 				print $yellow, "\nSubmitting jobs for the sample ",$sample_name, "...",$normal, "\n";
 				$current_job_file="";
-				if ($step_number == 0) {#run the whole pipeline
-					######################################################################
-					#cd-hit
-					{ 
-					&bsub_bwa();
-					}
 				######################################################################
 				#run the pipeline step by step
-				}elsif ($step_number == 1) {
-					&bsub_bwa();
+				if($step_number == 1) {
+					&nohup_bwa();
+				}elsif($step_number == 2) 
+				{
+				 	&nohup_sum();
 				}
 			}
 		}
@@ -219,9 +218,30 @@ sub check_input_dir {
 
 }
 
+
+sub nohup_sum{
+
+    $current_job_file = "j2_sum_".$sample_name.".sh";
+
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+
+    open(SUM, ">$job_files_dir/$current_job_file") or die $!;
+    print SUM "#!/bin/bash\n";
+    print SUM "          ".$run_script_path."generate_final_report.pl ".$run_dir." ".$version,"\n";
+    close SUM;
+    my $sh_file=$job_files_dir."/".$current_job_file;
+
+    $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
+    print $nohup_com;
+    system ($nohup_com);
+}
 ########################################################################
 ########################################################################
-sub bsub_bwa{
+sub nohup_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
 
@@ -301,17 +321,17 @@ sub bsub_bwa{
     close BWA;
 
     #my $sh_file=$job_files_dir."/".$current_job_file;
-    #$bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
-    #system ( $bsub_com );
+    #$nohup_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
+    #system ( $nohup_com );
  
         my $sh_file=$job_files_dir."/".$current_job_file;
 
-        $bsub_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
-        print $bsub_com;
-        system ($bsub_com);
+        $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
+        print $nohup_com;
+        system ($nohup_com);
 
 
-   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-    #system ( $bsub_com );
+   #$nohup_com = "bsub < $job_files_dir/$current_job_file\n";
+    #system ( $nohup_com );
 }
 
