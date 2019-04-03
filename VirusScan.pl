@@ -10,7 +10,7 @@ use Getopt::Long;
 
 #use POSIX;
 
-my $version = "_simplified_v1.0";
+my $version = "_simplified_v1.1";
 
 #color code
 my $red = "\e[31m";
@@ -154,7 +154,7 @@ close DH;
 &check_input_dir($run_dir);
 
 # start data processsing
-if ($step_number<2) {
+if ($step_number<3) {
 	#begin to process each sample
 	for (my $i=0;$i<@sample_dir_list;$i++) {#use the for loop instead. the foreach loop has some problem to pass the global variable $sample_name to the sub functions
 		$sample_name = $sample_dir_list[$i];

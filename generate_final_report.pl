@@ -32,9 +32,11 @@ my $l=$_;
 chomp($l); 
 if($l=~/^>gi/) 
 {
-my @temp=split(" ",$l); 
-my $gi=$temp[0]; 
+@temp=split(" ",$l); 
+my $gi=$temp[0];
+$gi=~s/\>//g; 
 my $name=$temp[1]; 
+#print $gi,"\n";
 for(my $i=2;$i<@temp;$i++)
 {
 $name.=" ".$temp[$i];
@@ -49,12 +51,16 @@ my ($wkday,$month,$day,$time,$year) = split(/\s+/, localtime);
 print OUT "VirusScan V${version}; Processing date: $day-$month-$year\n";
 
 my $c = "**************************************************************************\n";
-my $c2 = "#########################################################################\n\n";
+my $c2 = "#########################################################################\n";
 print OUT $c;
 
 print OUT "Summary:\n\n";
-&generate_SampleDescription( $dir );
-print OUT "End of Summary\n\n";
+
+print OUT "Sample","\t","Virus","\t","Number of supporting reads","\n"; 
+
+&generate_AssignmentSummary( $dir );
+
+print OUT "\nEnd of Summary\n";
 #print OUT $c ;
 
 #print OUT "\n\nSequence Report\n\n";
@@ -85,6 +91,7 @@ sub generate_AssignmentSummary {
 	foreach my $name (sort {$a cmp $b} @files) {
 		# name is either file name or sample name (directory)
 		my $full_path = $dir."/".$name;
+#		print $full_path,"\n";
 		if (!($name =~ /\./)) {
 			if (-d $full_path) { # is a directory
 				my $Summary_file = $full_path."/".$name.".mapped.reads";
@@ -95,10 +102,15 @@ sub generate_AssignmentSummary {
 					my $l=$_; 
 					chomp($l); 
 					@temp=split("\t",$l); 
+#					print $temp[2],"\n"; 
+					#<STDIN>;
 					$n=$gi2name{$temp[2]}; 
+#					print $n,"\n";
+#					<STDIN>;
 					$vreads{$n}{$temp[0]}++;							
 					}
-
+				if(keys %vreads)
+				{	
 				foreach $n (sort keys %vreads) 
 				{
 				my $count=0; 
@@ -106,10 +118,12 @@ sub generate_AssignmentSummary {
 				{
 					$count++; 
 				}
-				print OUT $name, "\t", $n, "\t", $count,"\n"; 
+				print OUT $name, "\t", $n, "\t", $count,"\n"; } 
 				} 	
-				}		
+				else { print OUT $name,"\t","Virus","\t","0","\n"; }
+			
 				print OUT $c2 ;
+			}
 			}
 		}
 	}
