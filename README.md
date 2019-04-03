@@ -13,14 +13,14 @@ Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Rey
 A simplified version of VirusScan, no dependency on taxonomy database. A customized virus database was created by using viruses found in above TCGA panvirus paper.       
 
 
-###Usage:###
+### Usage: ###
 
 git clone https://github.com/ding-lab/VirusScan.git
 git checkout simplified
 
 change ./source/path_tools.tsv for the software directory (samtools, bwa, bamtools) in your system. 
 
-##Install third-party tools (samtools, bwa, bamtools)##
+### Install third-party tools (samtools, bwa, bamtools) ###
 
 1. Install anaconda  
 
@@ -34,7 +34,7 @@ conda install -c bioconda bwa
 
 conda install -c bioconda bamtools
 
-## submit jobs in the directory that contains VirusScan scripts ##
+### submit jobs in the directory that contains VirusScan scripts ###
 
 Usage: perl VirusScan.pl  --rdir --log --step 
 
