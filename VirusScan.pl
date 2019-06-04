@@ -334,4 +334,3 @@ sub nohup_bwa{
    #$nohup_com = "bsub < $job_files_dir/$current_job_file\n";
     #system ( $nohup_com );
 }
-
