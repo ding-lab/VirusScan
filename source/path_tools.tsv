@@ -1,3 +1,3 @@
-samtools	/home/scao/tools/anaconda2/bin/samtools
+samtools	/diskmnt/Projects/Users/scao/tools/miniconda3/bin/samtools
 bwa	/diskmnt/Software/bwa-0.7.17/bwa
-bamtools	/home/scao/tools/anaconda2/bin/bamtools
+bamtools	/diskmnt/Projects/Users/scao/tools/miniconda3/bin/bamtools

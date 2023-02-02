@@ -1,0 +1,3 @@
+perl VirusScan.pl --rdir /diskmnt/Projects/Users/scao/projects/pan-atac/virus/hnsc --log /diskmnt/Projects/Users/scao/projects/pan-atac/virus/hnsc.log --step 1
+
+perl VirusScan.pl --rdir /diskmnt/Projects/Users/scao/projects/pan-atac/virus/newsamples --log /diskmnt/Projects/Users/scao/projects/pan-atac/virus/newsamples.log --step 1
