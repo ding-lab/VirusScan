@@ -4,6 +4,7 @@ use strict;
 use warnings;
 #use POSIX;
 
+my $version="2.1";
 #color code
 my $red = "\e[31m";
 my $gray = "\e[37m";
@@ -56,7 +57,7 @@ my $email = "scao\@wustl\.edu";
 # software path
 #my $cd_hit = "/gscuser/mboolcha/software/cdhit/cd-hit-est";
 my $repeat_masker = "RepeatMasker";
-my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
+my $blastn = "/diskmnt/Projects/Users/scao/tools/ncbi-blast-2.13.0+/bin/blastn";
 #my $blastx = "/gscuser/scao/tools/software/ncbi-blast+/bin/blastx";
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -65,9 +66,9 @@ my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
 #my $db_BX = "/gscuser/scao/gc3027/nr/nr";
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
-my $db_BN = "/gscmnt/gc3027/dinglab/medseq/nt/nt";
-my $db_BX = "/gscmnt/gc3027/dinglab/medseq/nr/nr";
-my $bwa_ref = "/gscmnt/gc3027/dinglab/medseq/fasta/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
+my $db_BN = "/diskmnt/Projects/Users/scao/database/nt";
+my $db_BX = "/diskmnt/Projects/Users/scao/database/nr";
+my $bwa_ref = "/diskmnt/Projects/Users/scao/database/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
 
 # reference genome taxonomy classification and database location.
 # It's better to change $refrence_genome_taxonomy and $reference_genome based on the data being analyzed.
