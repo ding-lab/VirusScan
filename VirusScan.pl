@@ -27,7 +27,7 @@ This script will run the virus discovery pipeline by using nohup:
  
 Pipeline version: $version
 
-$yellow Usage: perl $0  --rdir --log --step $normal
+$yellow Usage: perl $0  --groupname --users --rdir --log --step $normal
 
 <rdir> = full path of the folder holding files for this sequence run
 
@@ -35,6 +35,9 @@ $yellow Usage: perl $0  --rdir --log --step $normal
 
 <step> run this pipeline step by step. (running the whole pipeline if step number is 0)
 
+<groupname> = job group name
+
+<users> = user name for job group
 
 $green		 [1]  Run bwa for unmapped reads againt virus reference
 $purple [2]  Generate summary for virus discovery
@@ -46,15 +49,20 @@ my $run_dir="";
 my $log_dir="";
 my $help = 0;
 my $step_number = -1;
-
+my $compute_username="";
+my $group_name="";
+my $q_name="";
+my $bsub_com = ""; 
 my $status = &GetOptions (
       "step=i" => \$step_number,
       "rdir=s" => \$run_dir,
       "log=s"  => \$log_dir,
+      "groupname=s" => \$group_name,
+      "users=s" => \$compute_username,
       "help" => \$help,
         );
 
-if ($help || $run_dir eq "" || $log_dir eq "" || $step_number<0) 
+if ($help || $group_name eq "" || $compute_username eq ""  || $run_dir eq "" || $log_dir eq "" || $step_number<0) 
 {
       print $usage;
       exit;
@@ -63,6 +71,8 @@ if ($help || $run_dir eq "" || $log_dir eq "" || $step_number<0)
 print "run dir=",$run_dir,"\n";
 print "log dir=",$log_dir,"\n";
 print "step num=",$step_number,"\n";
+print "job group=",$group_name,"\n";
+print "user group=",$compute_username,"\n";
 
 ## read tools ##
 
@@ -102,7 +112,7 @@ close IN_TF;
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
 ## virus reference ##
-my $bwa_ref="./source/virusref.fa";
+my $bwa_ref="./source/pathogenpdx.031823.fa";
  
 my $HOME = $ENV{HOME};
 my $working_name= (split(/\//,$run_dir))[-2];
@@ -235,7 +245,10 @@ sub nohup_sum{
     close SUM;
     my $sh_file=$job_files_dir."/".$current_job_file;
 
-    $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $bsub_com;
+
+    #$nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
     print $nohup_com;
     system ($nohup_com);
 }
@@ -286,17 +299,17 @@ sub nohup_bwa{
     print BWA "BWA_mapped=".$sample_full_path."/".$sample_name.".mapped.reads\n";
     print BWA "BWA_fa=".$sample_full_path."/".$sample_name.".fa\n";
 	#print BWA 
-	print BWA 'if [ ! -s $BWA_mapped ]',"\n";
+    print BWA 'if [ ! -s $BWA_mapped ]',"\n";
     print BWA "    then\n";
-	print BWA "rm \${BWA_sai}","\n";
-	print BWA "rm \${BWA_fq}","\n";
+    print BWA "rm \${BWA_sai}","\n";
+    print BWA "rm \${BWA_fq}","\n";
 	#print BWA "mkfifo \${BWA_sai}","\n";
-	print BWA "mkfifo \${BWA_fq}","\n";
+    print BWA "mkfifo \${BWA_fq}","\n";
 	#0x100: secondary alignment
 	#0x800: supplementary alignment
     #H: Hard clipping
 	#S: Soft clipping
-     print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
+    print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
 
      #print BWA "$samtools view -f 4 \${BWA_IN} | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";	
     #print BWA "bwa aln $bwa_ref -b0 \${BWA_IN} > \${BWA_sai} \&","\n";	
@@ -311,7 +324,7 @@ sub nohup_bwa{
      print BWA "$samtools view -bT $bwa_ref \${BWA_sam} > \${BWA_bam}","\n"; 
 	#print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
     #print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-     print BWA 'rm ${BWA_sam}',"\n";
+    print BWA 'rm ${BWA_sam}',"\n";
      print BWA 'rm ${BWA_sai}',"\n";
 	#print BWA 'rm ${BWA_fq}',"\n";
 	#print BWA "else\n";
@@ -326,7 +339,10 @@ sub nohup_bwa{
  
         my $sh_file=$job_files_dir."/".$current_job_file;
 
-        $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $bsub_com;
+
+    #    $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
         print $nohup_com;
         system ($nohup_com);
 
