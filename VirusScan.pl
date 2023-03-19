@@ -10,7 +10,7 @@ use Getopt::Long;
 
 #use POSIX;
 
-my $version = "_simplified_v1.1";
+my $version = "simplified_v1.1";
 
 #color code
 my $red = "\e[31m";
@@ -27,7 +27,7 @@ This script will run the virus discovery pipeline by using nohup:
  
 Pipeline version: $version
 
-$yellow Usage: perl $0  --groupname --users --rdir --log --step $normal
+$yellow Usage: perl $0  --groupname --users --rdir --q --log --step $normal
 
 <rdir> = full path of the folder holding files for this sequence run
 
@@ -36,6 +36,8 @@ $yellow Usage: perl $0  --groupname --users --rdir --log --step $normal
 <step> run this pipeline step by step. (running the whole pipeline if step number is 0)
 
 <groupname> = job group name
+
+<q> which queue for submitting job; dinglab, general
 
 <users> = user name for job group
 
@@ -57,12 +59,13 @@ my $status = &GetOptions (
       "step=i" => \$step_number,
       "rdir=s" => \$run_dir,
       "log=s"  => \$log_dir,
+	  "q=s" => \$q_name,
       "groupname=s" => \$group_name,
       "users=s" => \$compute_username,
       "help" => \$help,
         );
 
-if ($help || $group_name eq "" || $compute_username eq ""  || $run_dir eq "" || $log_dir eq "" || $step_number<0) 
+if ($help || $group_name eq "" || $q_name eq "" || $compute_username eq ""  || $run_dir eq "" || $log_dir eq "" || $step_number<0) 
 {
       print $usage;
       exit;
@@ -249,8 +252,8 @@ sub nohup_sum{
     print $bsub_com;
 
     #$nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
-    print $nohup_com;
-    system ($nohup_com);
+    #print $nohup_com;
+    system ($bsub_com);
 }
 ########################################################################
 ########################################################################
@@ -343,8 +346,8 @@ sub nohup_bwa{
     print $bsub_com;
 
     #    $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
-        print $nohup_com;
-        system ($nohup_com);
+        #print $nohup_com;
+        system ($bsub_com);
 
 
    #$nohup_com = "bsub < $job_files_dir/$current_job_file\n";

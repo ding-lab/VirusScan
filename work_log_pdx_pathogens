@@ -1,0 +1,1 @@
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/simps21 --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/simps21.log --users songcao --groupname SomaticWXS --q general --step 1
