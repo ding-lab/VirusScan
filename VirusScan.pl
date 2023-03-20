@@ -23,7 +23,7 @@ my $normal = "\e[0m";
 
 #usage information
 (my $usage = <<OUT) =~ s/\t+//g;
-This script will run the virus discovery pipeline by using nohup:
+This script will run the virus discovery pipeline by using bsub:
  
 Pipeline version: $version
 
@@ -153,7 +153,7 @@ $run_script_path = "/usr/bin/perl ".$run_script_path."/";
 my $hold_RM_job = "norm"; 
 my $current_job_file = "";#cannot be empty
 my $hold_job_file = "";
-my $nohup_com = "";
+my $bsub_com = "";
 my $sample_full_path = "";
 my $sample_name = "";
 
@@ -167,7 +167,7 @@ close DH;
 &check_input_dir($run_dir);
 
 # start data processsing
-if ($step_number<3) {
+if ($step_number<2) {
 	#begin to process each sample
 	for (my $i=0;$i<@sample_dir_list;$i++) {#use the for loop instead. the foreach loop has some problem to pass the global variable $sample_name to the sub functions
 		$sample_name = $sample_dir_list[$i];
@@ -179,16 +179,21 @@ if ($step_number<3) {
 				######################################################################
 				#run the pipeline step by step
 				if($step_number == 1) {
-					&nohup_bwa();
-				}elsif($step_number == 2) 
-				{
-				 	&nohup_sum();
+					&bsub_bwa();
 				}
+		#elsif($step_number == 2) 
+		#		{
+		#		 	&bsub_sum();
+		#		}
 			}
 		}
 	}
 }
 
+if($step_number == 2)
+ {
+  &bsub_sum();
+  }
 
 exit;
 
@@ -232,7 +237,7 @@ sub check_input_dir {
 }
 
 
-sub nohup_sum{
+sub bsub_sum{
 
     $current_job_file = "j2_sum_".$sample_name.".sh";
 
@@ -251,13 +256,13 @@ sub nohup_sum{
     $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
     print $bsub_com;
 
-    #$nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
-    #print $nohup_com;
+    #$bsub_com = "bsub sh $sh_file > $lsf_out 2> $lsf_err &";
+    #print $bsub_com;
     system ($bsub_com);
 }
 ########################################################################
 ########################################################################
-sub nohup_bwa{
+sub bsub_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
 
@@ -337,19 +342,19 @@ sub nohup_bwa{
     close BWA;
 
     #my $sh_file=$job_files_dir."/".$current_job_file;
-    #$nohup_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
-    #system ( $nohup_com );
+    #$bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
+    #system ( $bsub_com );
  
-        my $sh_file=$job_files_dir."/".$current_job_file;
+     my $sh_file=$job_files_dir."/".$current_job_file;
 
     $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
-    print $bsub_com;
+     print $bsub_com;
 
-    #    $nohup_com = "nohup sh $sh_file > $lsf_out 2> $lsf_err &";
-        #print $nohup_com;
-        system ($bsub_com);
+    #    $bsub_com = "bsub sh $sh_file > $lsf_out 2> $lsf_err &";
+        #print $bsub_com;
+     system ($bsub_com);
 
 
-   #$nohup_com = "bsub < $job_files_dir/$current_job_file\n";
-    #system ( $nohup_com );
+   #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
+    #system ( $bsub_com );
 }
