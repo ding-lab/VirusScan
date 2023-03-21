@@ -41,8 +41,9 @@ $yellow Usage: perl $0  --groupname --users --rdir --q --log --step $normal
 
 <users> = user name for job group
 
-$green		 [1]  Run bwa for unmapped reads againt virus reference
-$purple [2]  Generate summary for virus discovery
+$green [1]  Run bwa for unmapped reads againt virus reference
+$green [2]  Count total reads
+$purple [3]  Generate summary for virus discovery
 
 $normal
 OUT
@@ -70,6 +71,7 @@ if ($help || $group_name eq "" || $q_name eq "" || $compute_username eq ""  || $
       print $usage;
       exit;
 }
+
 
 print "run dir=",$run_dir,"\n";
 print "log dir=",$log_dir,"\n";
@@ -118,7 +120,7 @@ close IN_TF;
 my $bwa_ref="./source/pathogenpdx.031823.fa";
  
 my $HOME = $ENV{HOME};
-my $working_name= (split(/\//,$run_dir))[-2];
+my $working_name= (split(/\//,$run_dir))[-1];
 
 # To run jobs faster, split large fasta files to small ones. Split to specific number of 
 # files instead of specific sequences in each small file, because the number of job array 
@@ -167,7 +169,7 @@ close DH;
 &check_input_dir($run_dir);
 
 # start data processsing
-if ($step_number<2) {
+if ($step_number<3) {
 	#begin to process each sample
 	for (my $i=0;$i<@sample_dir_list;$i++) {#use the for loop instead. the foreach loop has some problem to pass the global variable $sample_name to the sub functions
 		$sample_name = $sample_dir_list[$i];
@@ -180,17 +182,16 @@ if ($step_number<2) {
 				#run the pipeline step by step
 				if($step_number == 1) {
 					&bsub_bwa();
+				}elsif($step_number == 2) 
+				{
+				 	&bsub_count();
 				}
-		#elsif($step_number == 2) 
-		#		{
-		#		 	&bsub_sum();
-		#		}
 			}
 		}
 	}
 }
 
-if($step_number == 2)
+if($step_number == 3)
  {
   &bsub_sum();
   }
@@ -239,7 +240,7 @@ sub check_input_dir {
 
 sub bsub_sum{
 
-    $current_job_file = "j2_sum_".$sample_name.".sh";
+    $current_job_file = "j3_sum_".$working_name.".sh";
 
     my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
     my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
@@ -332,14 +333,14 @@ sub bsub_bwa{
      print BWA "$samtools view -bT $bwa_ref \${BWA_sam} > \${BWA_bam}","\n"; 
 	#print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
     #print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-    print BWA 'rm ${BWA_sam}',"\n";
+     print BWA 'rm ${BWA_sam}',"\n";
      print BWA 'rm ${BWA_sai}',"\n";
 	#print BWA 'rm ${BWA_fq}',"\n";
 	#print BWA "else\n";
     #print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
     #print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-    print BWA "   fi\n";
-    close BWA;
+     print BWA "   fi\n";
+     close BWA;
 
     #my $sh_file=$job_files_dir."/".$current_job_file;
     #$bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
@@ -357,4 +358,40 @@ sub bsub_bwa{
 
    #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";
     #system ( $bsub_com );
+}
+
+sub bsub_count {
+
+    $current_job_file = "j2_count_".$sample_name.".sh";
+
+    my $IN_bam = $sample_full_path."/".$sample_name.".bam";
+
+    if (! -e $IN_bam) {#make sure there is a input fasta file 
+        print $red,  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        print "Warning: Died because there is no input bam file for bwa:\n";
+        print "File $IN_bam does not exist!\n";
+        die "Please check command line argument!", $normal, "\n\n";
+
+    }
+    if (! -s $IN_bam) {#make sure input fasta file is not empty
+        print $red, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        die "Warning: Died because $IN_bam is empty!", $normal, "\n\n";
+    }
+
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+
+    open(COUNT, ">$job_files_dir/$current_job_file") or die $!;
+    print COUNT "#!/bin/bash\n";
+    print COUNT "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
+    print COUNT "BWA_count=".$sample_full_path."/".$sample_name.".reads.count.tsv\n";
+    print COUNT "$samtools view -c \${BWA_IN} > \${BWA_count}\n"; 
+    close COUNT;
+    my $sh_file=$job_files_dir."/".$current_job_file;
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";	
+    print $bsub_com;
+    system ($bsub_com);
 }

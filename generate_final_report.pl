@@ -20,7 +20,7 @@ my @temp = split("/", $dir);
 my $run_name = pop @temp;
 my $outFile = $dir."/Analysis_Report_".$run_name;
 
-my $virus_ref="./source/virusref.fa"; 
+my $virus_ref="./source/pathogenpdx.031823.fa"; 
 
 open(IN,"<$virus_ref"); 
 
@@ -56,7 +56,7 @@ print OUT $c;
 
 print OUT "Summary:\n\n";
 
-print OUT "Sample","\t","Virus","\t","Number of supporting reads","\n"; 
+print OUT "Sample","\t","totalreads","\t","Virus","\t","supportingreads","\n"; 
 
 &generate_AssignmentSummary( $dir );
 
@@ -95,9 +95,13 @@ sub generate_AssignmentSummary {
 		if (!($name =~ /\./)) {
 			if (-d $full_path) { # is a directory
 				my $Summary_file = $full_path."/".$name.".mapped.reads";
+				my $readcount_file = $full_path."/".$name.".reads.count.tsv";
 				if (-e $Summary_file) {
 					my %vreads=();
+					my $totreads;
 					open (IN, $Summary_file) or die "can not open file $Summary_file!\n";
+					open (INC,$readcount_file) or die "can not open file $Summary_file!\n";
+
 					while (<IN>) {
 					my $l=$_; 
 					chomp($l); 
@@ -109,6 +113,14 @@ sub generate_AssignmentSummary {
 #					<STDIN>;
 					$vreads{$n}{$temp[0]}++;							
 					}
+
+					while (<INC>)
+					{
+					my $l=$_;
+                                        chomp($l);
+					$totreads=$l; 
+					}
+
 				if(keys %vreads)
 				{	
 				foreach $n (sort keys %vreads) 
@@ -118,11 +130,12 @@ sub generate_AssignmentSummary {
 				{
 					$count++; 
 				}
-				print OUT $name, "\t", $n, "\t", $count,"\n"; } 
+				print OUT $name, "\t",$totreads, "\t", $n, "\t", $count,"\n"; } 
 				} 	
-				else { print OUT $name,"\t","Virus","\t","0","\n"; }
+				else { print OUT $name, "\t",$totreads,"\t","Virus","\t","0","\n"; }
 			
 				print OUT $c2 ;
+				close IN; 
 			}
 			}
 		}
