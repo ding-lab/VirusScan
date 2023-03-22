@@ -155,7 +155,7 @@ $run_script_path = "/usr/bin/perl ".$run_script_path."/";
 my $hold_RM_job = "norm"; 
 my $current_job_file = "";#cannot be empty
 my $hold_job_file = "";
-my $bsub_com = "";
+#my $bsub_com = "";
 my $sample_full_path = "";
 my $sample_name = "";
 

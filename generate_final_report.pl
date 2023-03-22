@@ -18,7 +18,7 @@ my ( $dir, $version ) = @ARGV;
 
 my @temp = split("/", $dir);
 my $run_name = pop @temp;
-my $outFile = $dir."/Analysis_Report_".$run_name;
+my $outFile = $dir."/Analysis_Report_".$run_name.".txt";
 
 my $virus_ref="./source/pathogenpdx.031823.fa"; 
 
@@ -48,7 +48,7 @@ $gi2name{$gi}=$name;
 open (OUT, ">$outFile") or die "can not open file $outFile!\n";
 
 my ($wkday,$month,$day,$time,$year) = split(/\s+/, localtime);
-print OUT "VirusScan V${version}; Processing date: $day-$month-$year\n";
+print OUT "VirusScan ${version}; Processing date: $day-$month-$year\n";
 
 my $c = "**************************************************************************\n";
 my $c2 = "#########################################################################\n";
@@ -56,7 +56,7 @@ print OUT $c;
 
 print OUT "Summary:\n\n";
 
-print OUT "Sample","\t","totalreads","\t","Virus","\t","supportingreads","\n"; 
+print OUT "Sample","\t","totalreads","\t","Virus/Bacteria","\t","supportingreads","\t","RPHM","\n"; 
 
 &generate_AssignmentSummary( $dir );
 
@@ -130,11 +130,11 @@ sub generate_AssignmentSummary {
 				{
 					$count++; 
 				}
-				print OUT $name, "\t",$totreads, "\t", $n, "\t", $count,"\n"; } 
+				print OUT $name, "\t",$totreads, "\t", $n, "\t", $count,"\t",sprintf("%.4f",$count/$totreads*(100000000)),"\n"; } 
 				} 	
-				else { print OUT $name, "\t",$totreads,"\t","Virus","\t","0","\n"; }
+				else { print OUT $name, "\t",$totreads,"\t","Virus","\t","0","\t","0","\n"; }
 			
-				print OUT $c2 ;
+	#			print OUT $c2 ;
 				close IN; 
 			}
 			}
