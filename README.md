@@ -13,10 +13,6 @@ Song Cao, Michael C. Wendl, Matthew A. Wyczalkowski, Kristine Wylie, Kai Ye, Rey
 VirusScan pipeline is a fully automated and modular software package designed for the fast 
 and accurate detection of known viruses from NGS data. It works on LSF job scheduler. 
 
-It was developed from VirusHunter pipeline, which focuses on identification of novel viruses for 454 reads. 
-Compared to VirusHunter pipeline, VirusScan can work on Illlumina WGS, WES and RNA-Seq data and fastly return 
-the discovery result of known viruses.  
-
 ###Dependencies:###
 
 
