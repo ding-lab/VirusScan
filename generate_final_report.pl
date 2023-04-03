@@ -108,10 +108,13 @@ sub generate_AssignmentSummary {
 					@temp=split("\t",$l); 
 #					print $temp[2],"\n"; 
 					#<STDIN>;
+					if($temp[4]>0)
+					{
 					$n=$gi2name{$temp[2]}; 
 #					print $n,"\n";
 #					<STDIN>;
 					$vreads{$n}{$temp[0]}++;							
+					}
 					}
 
 					while (<INC>)
@@ -132,7 +135,7 @@ sub generate_AssignmentSummary {
 				}
 				print OUT $name, "\t",$totreads, "\t", $n, "\t", $count,"\t",sprintf("%.4f",$count/$totreads*(100000000)),"\n"; } 
 				} 	
-				else { print OUT $name, "\t",$totreads,"\t","Virus","\t","0","\t","0","\n"; }
+				else { print OUT $name, "\t",$totreads,"\t","Virus/Bacteria","\t","0","\t","0","\n"; }
 			
 	#			print OUT $c2 ;
 				close IN; 

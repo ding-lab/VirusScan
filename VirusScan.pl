@@ -41,6 +41,7 @@ $yellow Usage: perl $0  --groupname --users --rdir --q --log --step $normal
 
 <users> = user name for job group
 
+$green [0]  Run alignment
 $green [1]  Run bwa for unmapped reads againt virus reference
 $green [2]  Count total reads
 $purple [3]  Generate summary for virus discovery
@@ -166,8 +167,10 @@ my @sample_dir_list = readdir DH;
 close DH;
 
 # check to make sure the input directory has correct structure
+if($step_number<3)
+{
 &check_input_dir($run_dir);
-
+}
 # start data processsing
 if ($step_number<3) {
 	#begin to process each sample
@@ -180,7 +183,10 @@ if ($step_number<3) {
 				$current_job_file="";
 				######################################################################
 				#run the pipeline step by step
-				if($step_number == 1) {
+				if($step_number == 0)
+				{
+				 &bsub_align();
+				}elsif($step_number == 1) {
 					&bsub_bwa();
 				}elsif($step_number == 2) 
 				{
@@ -260,6 +266,13 @@ sub bsub_sum{
     #$bsub_com = "bsub sh $sh_file > $lsf_out 2> $lsf_err &";
     #print $bsub_com;
     system ($bsub_com);
+}
+
+## do alignment to generate the bam files if the input files are fastq 
+sub bsub_align{
+
+    $current_job_file = "j0_align_".$sample_name.".sh";
+
 }
 ########################################################################
 ########################################################################
