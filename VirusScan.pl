@@ -57,6 +57,13 @@ my $compute_username="";
 my $group_name="";
 my $q_name="";
 my $bsub_com = ""; 
+my $THREADS=3;
+my $STAR_INDEX_DIR="/storage1/fs1/dinglab/Active/Projects/Datasets/arriba/STAR_index_hg38_GENCODE38";
+my $ANNOTATION_GTF="/storage1/fs1/dinglab/Active/Projects/Datasets/arriba/STAR_index_hg38_GENCODE38/GENCODE38.gtf";
+my $ASSEMBLY_FA="/storage1/fs1/dinglab/Active/Projects/Datasets/arriba/STAR_index_hg38_GENCODE38/hg38.fa";
+my $BLACKLIST_TSV="/storage1/fs1/dinglab/Active/Projects/Datasets/arriba/database/blacklist_hg38_GRCh38_v2.2.1.tsv.gz";
+my $KNOWN_FUSIONS_TSV="/storage1/fs1/dinglab/Active/Projects/Datasets/arriba/database/known_fusions_hg38_GRCh38_v2.2.1.tsv.gz";
+
 my $status = &GetOptions (
       "step=i" => \$step_number,
       "rdir=s" => \$run_dir,
@@ -167,10 +174,10 @@ my @sample_dir_list = readdir DH;
 close DH;
 
 # check to make sure the input directory has correct structure
-if($step_number<3)
-{
-&check_input_dir($run_dir);
-}
+#if($step_number<3)
+#{
+#&check_input_dir($run_dir);
+#}
 # start data processsing
 if ($step_number<3) {
 	#begin to process each sample
@@ -273,6 +280,60 @@ sub bsub_align{
 
     $current_job_file = "j0_align_".$sample_name.".sh";
 
+    my $IN_fq1 = $sample_full_path."/".$sample_name.".fq1";
+    my $IN_fq2 = $sample_full_path."/".$sample_name.".fq2";
+	
+    if (! -e $IN_fq1) {
+	#make sure there is a input fasta file 
+        print $red,  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        print "Warning: Died because there is no input bam file for bwa:\n";
+        print "File $IN_fq1 does not exist!\n";
+        die "Please check command line argument!", $normal, "\n\n";
+
+    }
+
+    if (! -s $IN_fq1) {#make sure input fasta file is not empty
+        print $red, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        die "Warning: Died because $IN_fq1 is empty!", $normal, "\n\n";
+    }
+
+    if (! -e $IN_fq2) {
+	#make sure there is a input fasta file 
+        print $red,  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        print "Warning: Died because there is no input bam file for bwa:\n";
+        print "File $IN_fq2 does not exist!\n";
+        die "Please check command line argument!", $normal, "\n\n";
+    }
+
+    if (! -s $IN_fq2) {#make sure input fasta file is not empty
+        print $red, "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
+        die "Warning: Died because $IN_fq2 is empty!", $normal, "\n\n";
+    }
+
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+
+    open(ALIGN, ">$job_files_dir/$current_job_file") or die $!;
+    print ALIGN "#!/bin/bash\n";
+    print ALIGN "BASE_DIR=\"/arriba_v2.2.1\"","\n";
+    print ALIGN "cd $sample_full_path","\n"; 
+    print ALIGN "alignedbam=".$sample_full_path."/Aligned.out.bam\n";
+    print ALIGN "sortedbam=".$sample_full_path."/Aligned.sortedByCoord.out.bam\n";
+    print ALIGN "STAR --runThreadN $THREADS --genomeDir $STAR_INDEX_DIR --genomeLoad NoSharedMemory --readFilesIn $IN_fq1 $IN_fq2 --readFilesCommand zcat --outStd BAM_Unsorted --outSAMtype BAM Unsorted --outSAMunmapped Within --outBAMcompression 0 --outFilterMultimapNmax 50 --peOverlapNbasesMin 10 --alignSplicedMateMapLminOverLmate 0.5 --alignSJstitchMismatchNmax 5 -1 5 5 --chimSegmentMin 10 --chimOutType WithinBAM HardClip --chimJunctionOverhangMin 10 --chimScoreDropMax 30 --chimScoreJunctionNonGTAG 0 --chimScoreSeparation 1 --chimSegmentReadGapMax 3 --chimMultimapNmax 50 > \${alignedbam}","\n";
+    print ALIGN "samtools sort -@ $THREADS -m \$((40000/$THREADS))M -T tmp -O bam \${alignedbam} > \${sortedbam}","\n";
+    print ALIGN "rm -f \${alignedbam} ","\n";
+    print ALIGN "samtools index \${sortedbam}","\n"; 
+    close ALIGN; 
+
+    my $sh_file=$job_files_dir."/".$current_job_file;
+
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 3 -R \"select[mem>80000] rusage[mem=80000]\" -M 80000000 -a \'docker(uhrigs/arriba:2.2.1)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $bsub_com;
+    system ($bsub_com);
+ 
 }
 ########################################################################
 ########################################################################
@@ -282,7 +343,13 @@ sub bsub_bwa{
 
     $current_job_file = "j1_bwa_".$sample_name.".sh";
 
+    my $star_bam = $sample_full_path."/Aligned.sortedByCoord.out.bam"; 
+    my $star_bam_bai = $sample_full_path."/Aligned.sortedByCoord.out.bam.bai";
+  
     my $IN_bam = $sample_full_path."/".$sample_name.".bam";
+    my $IN_bam_bai = $sample_full_path."/".$sample_name.".bam.bai";
+
+   if(-e $star_bam) { `ln -s $star_bam $IN_bam`; `ln -s $star_bam_bai $IN_bam_bai`; }
 
     if (! -e $IN_bam) {#make sure there is a input fasta file 
         print $red,  "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n";
@@ -335,38 +402,38 @@ sub bsub_bwa{
 
      #print BWA "$samtools view -f 4 \${BWA_IN} | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";	
     #print BWA "bwa aln $bwa_ref -b0 \${BWA_IN} > \${BWA_sai} \&","\n";	
-     print BWA "$bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
-     print BWA 'rm ${BWA_fq}',"\n";
-     print BWA "mkfifo \${BWA_fq}","\n";
-     print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
+    print BWA "$bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
+    print BWA 'rm ${BWA_fq}',"\n";
+    print BWA "mkfifo \${BWA_fq}","\n";
+    print BWA "$samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^NC/))) { print \$line;}\' | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
 	#print BWA "samtools view -h \${BWA_IN} | gawk \'{if (substr(\$1,1,1)==\"\@\" || (and(\$2,0x4) || and(\$2,0x8) )) print}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
     # print BWA "$samtools view -f 4 \${BWA_IN} | $samtools view -Sb - | $bamtools convert -format fastq > \${BWA_fq} \&","\n";
-     print BWA "$bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} > \${BWA_sam}","\n";  	
-     print BWA "grep -v \@SQ \${BWA_sam} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
-     print BWA "$samtools view -bT $bwa_ref \${BWA_sam} > \${BWA_bam}","\n"; 
+    print BWA "$bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} > \${BWA_sam}","\n";  	
+    print BWA "grep -v \@SQ \${BWA_sam} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
+    print BWA "$samtools view -bT $bwa_ref \${BWA_sam} > \${BWA_bam}","\n"; 
 	#print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
     #print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-     print BWA 'rm ${BWA_sam}',"\n";
-     print BWA 'rm ${BWA_sai}',"\n";
+    print BWA 'rm ${BWA_sam}',"\n";
+    print BWA 'rm ${BWA_sai}',"\n";
 	#print BWA 'rm ${BWA_fq}',"\n";
 	#print BWA "else\n";
     #print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
     #print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-     print BWA "   fi\n";
-     close BWA;
+    print BWA "   fi\n";
+    close BWA;
 
     #my $sh_file=$job_files_dir."/".$current_job_file;
     #$bsub_com = "bsub -q research-hpc -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(registry.gsc.wustl.edu/genome/genome_perl_environment)\' -J $current_job_file -o $lsf_out -e $lsf_err sh $sh_file\n";
     #system ( $bsub_com );
  
-     my $sh_file=$job_files_dir."/".$current_job_file;
+    my $sh_file=$job_files_dir."/".$current_job_file;
 
     $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
-     print $bsub_com;
+    print $bsub_com;
 
     #    $bsub_com = "bsub sh $sh_file > $lsf_out 2> $lsf_err &";
         #print $bsub_com;
-     system ($bsub_com);
+    system ($bsub_com);
 
 
    #$bsub_com = "bsub < $job_files_dir/$current_job_file\n";

@@ -41,3 +41,13 @@ perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan
 perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/othercenter --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/othercenter.log --users songcao --groupname SomaticWXS --q general --step 2
 
 perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/othercenter --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/othercenter.log --users songcao --groupname SomaticWXS --q general --step 3
+
+## test.star
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/test.star --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/test.star.log --users songcao --groupname SomaticWXS --q general --step 0
+
+# batch1-10
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10 --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10.log --users songcao --groupname SomaticWXS --q general --step 1
+
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10 --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10.log --users songcao --groupname SomaticWXS --q dinglab --step 2
+
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10 --log /storage1/fs1/dinglab/Active/Projects/scao/pdx/viruscan/wustlb1to10.log --users songcao --groupname SomaticWXS --q dinglab --step 3
