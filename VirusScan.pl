@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 #use POSIX;
+use Getopt::Long;
 
 #color code
 my $red = "\e[31m";
@@ -12,7 +13,7 @@ my $green = "\e[32m";
 my $purple = "\e[35m";
 my $cyan = "\e[36m";
 my $normal = "\e[0m"; 
-
+my $version = "1.1";
 #usage information
 (my $usage = <<OUT) =~ s/\t+//g;
 This script will run the virus discovery pipeline on LSF cluster.
@@ -40,13 +41,43 @@ $purple		[12 or <=32] Assignment report for each sample
 $normal
 OUT
 
-die $usage unless @ARGV == 2;
-my ( $run_dir, $step_number ) = @ARGV;
-if ($run_dir =~/(.+)\/$/) {
-	$run_dir = $1;
-}
 
-die $usage unless ($step_number >=0)&&(($step_number <= 17) || ($step_number >= 22));
+#__DEFAULT NUMBER OF BINS IE (MUST BE INTEGER)
+my $step_number = -1;
+my $status_rerun=0; 
+
+#__HELP (BOOLEAN, DEFAULTS TO NO-HELP)
+my $help = 0;
+my $q_name="";
+#__FILE NAME (STRING, NO DEFAULT)
+my $run_dir="";
+my $log_dir="";
+
+my $compute_username="";
+my $group_name="";
+
+#__PARSE COMMAND LINE
+my $status = &GetOptions (
+      "step=i" => \$step_number,
+      "sre=i" => \$status_rerun,	
+      "groupname=s" => \$group_name,
+      "users=s" => \$compute_username,	
+      "rdir=s" => \$run_dir,
+	  "log=s"  => \$log_dir,
+	  "q=s" => \$q_name,
+   	  "help" => \$help
+	);
+ 
+#print $status,"\n";
+
+if ($help || $run_dir eq "" || $log_dir eq "" || $group_name eq "" || $compute_username eq "" || $step_number<0 ) {
+	 print "wrong option\n";
+	  print $usage;
+      exit;
+   }
+
+# unless ($step_number >=0)&&(($step_number <= 17) || ($step_number >= 22));
+
 
 
 #####################################################################################
@@ -55,8 +86,9 @@ my $email = "scao\@wustl\.edu";
 
 # software path
 #my $cd_hit = "/gscuser/mboolcha/software/cdhit/cd-hit-est";
-my $repeat_masker = "RepeatMasker";
-my $blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
+# my RepeatMasker = "RepeatMasker";
+# my blastn = "/gscuser/scao/tools/ncbi-blast+/bin/blastn";
+# my $bwa="/storage1/fs1/songcao/Active/Software/anaconda3/bin/bwa"
 #my $blastx = "/gscuser/scao/tools/software/ncbi-blast+/bin/blastx";
 
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -403,14 +435,13 @@ sub bsub_bwa{
         die "Warning: Died because $IN_bam is empty!", $normal, "\n\n";
     }
 
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+
     open(BWA, ">$job_files_dir/$current_job_file") or die $!;
     print BWA "#!/bin/bash\n";
-    print BWA "#BSUB -n 1\n";
-    print BWA "#BSUB -R \"rusage[mem=20000]\"","\n";
-    print BWA "#BSUB -M 20000000\n";
-    print BWA "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print BWA "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print BWA "#BSUB -J $current_job_file\n";
     print BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
     print BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
     print BWA "BWA_sai=".$sample_full_path."/".$sample_name.".sai\n";
@@ -447,8 +478,16 @@ sub bsub_bwa{
     print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
     print BWA "   fi\n";
     close BWA;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-    system ( $bsub_com );
+
+	my $sh_file=$job_files_dir."/".$current_job_file;
+
+    #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
+
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.1)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $bsub_com;
+    system ($bsub_com);
+
+
 }
 
 #####################################################################################
@@ -540,14 +579,14 @@ sub submit_job_array_RM {
     print RM "  then\n";
     #print RM '      while [ ! -s $RMOUT ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
    # print RM "      do\n"; # run RepeatMasker until it finishes
-    print RM "          $repeat_masker -pa 4 \$RMIN \n";
+    print RM "          RepeatMasker -pa 4 \$RMIN \n";
    # print RM "      done\n";
     print RM "  fi\n\n";
 	print RM '	if [ ! -f $RMOTHER ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
 	print RM "	then\n";
 	print RM '		while [ ! -f $RMOTHER  ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
 	print RM "		do\n"; # run RepeatMasker until it finishes
-	print RM "			$repeat_masker -pa 4 \$RMIN \n"; 
+	print RM "			RepeatMasker -pa 4 \$RMIN \n"; 
 	print RM " 		done\n";
 	print RM "	fi\n\n";
  	print RM '	if [ ! -f $RMOUT ]',"\n"; #sometimes repeatmasker does not find any repeat in input files, in these cases no .masked file will be generated.
@@ -698,12 +737,12 @@ sub submit_job_array_blast_RefG{
 	#if blast output file does not exist, do blast and check the completeness of output
 	print RefG '	if [ ! -f $BlastRefGOUT ]',"\n";
 	print RefG "	then\n";
-	print RefG "		$blastn -evalue  1e-9   -show_gis  -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
+	print RefG "		blastn -evalue  1e-9   -show_gis  -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
 	print RefG '		tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
 	print RefG '		CHECK=$?',"\n";
 	print RefG '		while [ ${CHECK} -eq 1 ]',"\n";
 	print RefG "		do\n";
-	print RefG "			$blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
+	print RefG "			blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
 	print RefG '			tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
 	print RefG '			CHECK=$?',"\n";
 	print RefG "		done\n";
@@ -713,7 +752,7 @@ sub submit_job_array_blast_RefG{
 	print RefG '		CHECK=$?',"\n";
 	print RefG '		while [ ${CHECK} -eq 1 ]',"\n";
 	print RefG "		do\n";
-	print RefG "			$blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
+	print RefG "			blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
 	print RefG '			tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
 	print RefG '			CHECK=$?',"\n";
 	print RefG "		done\n";
@@ -886,14 +925,14 @@ sub submit_job_array_blast_N{
 	#if the output file does not exist, run and check the completeness of the output file
 	print BN '	if [ ! -f $BlastNOUT ]',"\n";
 	print BN "	then\n";
-	print BN "		$blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
+	print BN "		blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
 	print BN '		tail -5 ${BlastNOUT}|grep Matrix',"\n";
 	print BN '		CHECK1=$?',"\n";
 	print BN '		grep "no longer exists in database" ${BlastNOUT}',"\n"; # one possible blast error message ( see the end of this script).
 	print BN '		CHECK2=$?',"\n";
 	print BN '		while [ ${CHECK1} -eq 1 ] || [ ${CHECK2} -eq 0 ]',"\n";
 	print BN "		do\n";
-	print BN "			$blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
+	print BN "			blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
 	print BN '			tail -5 ${BlastNOUT}|grep Matrix',"\n";
 	print BN '			CHECK1=$?',"\n";
 	print BN '			grep "no longer exists in database" ${BlastNOUT}',"\n";#see the end of this script
@@ -907,7 +946,7 @@ sub submit_job_array_blast_N{
 	print BN '		CHECK2=$?',"\n";
 	print BN '		while [ ${CHECK1} -eq 1 ] || [ ${CHECK2} -eq 0 ]',"\n";
 	print BN "		do\n";
-	print BN "			$blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
+	print BN "			blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
 	print BN '			tail -5 ${BlastNOUT}|grep Matrix',"\n";
 	print BN '			CHECK1=$?',"\n";
 	print BN '			grep "no longer exists in database" ${BlastNOUT}',"\n";#see the end of this script
@@ -1156,8 +1195,3 @@ sub summary_for_each_sample{
 	system ($bsub_com);
 }
 
-=add
-possible blast error
-Sequence with id 224967180 no longer exists in database...alignment skipped
-Sequence with id 224967180 no longer exists in database...alignment skipped
-=cut
