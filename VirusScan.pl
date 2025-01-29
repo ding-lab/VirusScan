@@ -18,7 +18,9 @@ my $version = "1.1";
 (my $usage = <<OUT) =~ s/\t+//g;
 This script will run the virus discovery pipeline on LSF cluster.
 Pipeline version: $version
-$yellow		Usage: perl $0 <run_folder> <step_number> $normal
+$yellow		Usage: perl $0 --sre --rdir --log --q --groupname --users --step
+
+ $normal
 
 <run_folder> = full path of the folder holding files for this sequence run
 
@@ -71,9 +73,9 @@ my $status = &GetOptions (
 #print $status,"\n";
 
 if ($help || $run_dir eq "" || $log_dir eq "" || $group_name eq "" || $compute_username eq "" || $step_number<0 ) {
-	 print "wrong option\n";
-	  print $usage;
-      exit;
+	print "wrong option\n";
+	print $usage;
+    exit;
    }
 
 # unless ($step_number >=0)&&(($step_number <= 17) || ($step_number >= 22));
@@ -97,9 +99,9 @@ my $email = "scao\@wustl\.edu";
 #my $db_BX = "/gscuser/scao/gc3027/nr/nr";
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
-my $db_BN = "/gscmnt/gc3027/dinglab/medseq/nt/nt";
-my $db_BX = "/gscmnt/gc3027/dinglab/medseq/nr/nr";
-my $bwa_ref = "/gscmnt/gc3027/dinglab/medseq/fasta/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
+my $db_BN = "/storage1/fs1/songcao/Active/Database/nt";
+my $db_BX = "/storage1/fs1/songcao/Active/Database/nr";
+my $bwa_ref = "/storage1/fs1/songcao/Active/Database/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
 
 # reference genome taxonomy classification and database location.
 # It's better to change $refrence_genome_taxonomy and $reference_genome based on the data being analyzed.
@@ -115,7 +117,7 @@ my $reference_genome = "";
 
 $refrence_genome_taxonomy = "Homo";
 
-$reference_genome = "/gscmnt/gc3027/dinglab/medseq/human70.37/humandnacdna.fa";
+$reference_genome = "/storage1/fs1/songcao/Active/Database/hg38_database/GRCh38.d1.vd1/GRCh38.d1.vd1.fa";
 
 #####################################################################################
 # everything else below should be automated
@@ -139,8 +141,12 @@ my $file_number_of_Blast_N = 100; #default
 #my $file_number_of_Blast_X = 200; #default
 
 #store job files here
-my $HOME1="/gscmnt/gc2524/dinglab";
 
+my $HOME1=$log_dir;
+
+if (! -d $HOME1) {
+    `mkdir $HOME1`;
+}
 #store job files here
 if (! -d $HOME1."/tmp") {
     `mkdir $HOME1"/tmp"`;
@@ -148,10 +154,10 @@ if (! -d $HOME1."/tmp") {
 my $job_files_dir = $HOME1."/tmp";
 
 #store SGE output and error files here
-if (! -d $HOME1."/SGE_DIR") {
-    `mkdir $HOME1"/SGE_DIR"`;
+if (! -d $HOME1."/LSF_DIR") {
+    `mkdir $HOME1"/LSF_DIR"`;
 }
-my $lsf_file_dir = $HOME1."/SGE_DIR";
+my $lsf_file_dir = $HOME1."/LSF_DIR";
 
 # obtain script path
 my $run_script_path = `dirname $0`;
@@ -419,7 +425,7 @@ sub bsub_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
 
-    $current_job_file = "j1_bwa_".$sample_name.$$.".sh";
+    $current_job_file = "j1_bwa_".$sample_name.".".$$.".sh";
 
     my $IN_bam = $sample_full_path."/".$sample_name.".bam";
 
@@ -441,6 +447,7 @@ sub bsub_bwa{
     `rm $lsf_err`;
 
     open(BWA, ">$job_files_dir/$current_job_file") or die $!;
+
     print BWA "#!/bin/bash\n";
     print BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
     print BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
