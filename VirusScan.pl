@@ -501,24 +501,25 @@ sub bsub_bwa{
 
 sub split_for_RepeatMasker {
 	#split file for RepeatMasker
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+	# my ($step_by_step) = @_;
+	# if ($step_by_step) {
+	# 	$hold_job_file = "";
+	# }else{
+	# 	$hold_job_file = $current_job_file;
+	# }
+
 	$current_job_file = "j2_".$sample_name."_RM_split_".$$.".sh";
+	
+    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
+    `rm $lsf_out`;
+    `rm $lsf_err`;
+	
 	open(RMSPLIT, ">$job_files_dir/$current_job_file") or die $!;
 	print RMSPLIT "#!/bin/bash\n";
-	print RMSPLIT "#BSUB -n 1\n";
-    #print RMSPLIT "#BSUB -q ding-lab\n";
-	print RMSPLIT "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print RMSPLIT "#BSUB -M 10000000\n";
-    print RMSPLIT "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RMSPLIT "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RMSPLIT "#BSUB -J $current_job_file\n";
+   # print RMSPLIT "#BSUB -J $current_job_file\n";
 	print RMSPLIT "RMSPLIT_IN=".$sample_full_path."/".$sample_name.".fa\n";
-	print RMSPLIT "#BSUB -w \"$hold_job_file\"","\n";	
+#	print RMSPLIT "#BSUB -w \"$hold_job_file\"","\n";	
 	#####################
 	print RMSPLIT "RM_DIR=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
 	print RMSPLIT "SAMPLE_DIR=".$sample_full_path."\n\n";
@@ -546,9 +547,19 @@ sub split_for_RepeatMasker {
 	print RMSPLIT "	done\n";
 	print RMSPLIT "fi\n";
 	close RMSPLIT;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";	
-	#$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+
+
+	my $sh_file=$job_files_dir."/".$current_job_file;
+
+    #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
+
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.1)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $bsub_com;
+    system ($bsub_com);
+
+	# $bsub_com = "bsub < $job_files_dir/$current_job_file";	
+	# #$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
+	# system ($bsub_com);
 }
 
 #####################################################################################
