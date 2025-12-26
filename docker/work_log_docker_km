@@ -1,0 +1,12 @@
+conda create -n viruscan bwa blast repeatmasker -c bioconda -c conda-forge
+conda install -c bioconda samtools
+
+
+conda env export -n virusscan > env.yaml
+
+
+docker build -f ./Dockerfile -t scao/virusscan:0.0.2 .
+
+
+docker push scao/virusscan:0.0.2
+~                                     
