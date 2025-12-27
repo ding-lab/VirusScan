@@ -183,7 +183,7 @@ my @sample_dir_list = readdir DH;
 close DH;
 
 # check to make sure the input directory has correct structure
-&check_input_dir($run_dir);
+# &check_input_dir($run_dir);
 
 # start data processsing
 if ($step_number < 14 || $step_number>=22) {
@@ -490,7 +490,7 @@ sub bsub_bwa{
 
     #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
 
-    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.1)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.2)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
     print $bsub_com;
     system ($bsub_com);
 
@@ -553,7 +553,7 @@ sub split_for_RepeatMasker {
 
     #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
 
-    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.1)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.2)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
     print $bsub_com;
     system ($bsub_com);
 
@@ -565,58 +565,62 @@ sub split_for_RepeatMasker {
 #####################################################################################
 
 sub submit_job_array_RM {
-	#submit RepeatMasker job array
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
-	$current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
-	open (RM, ">$job_files_dir/$current_job_file") or die $!;
-	print RM "#!/bin/bash\n";
-	print RM "#BSUB -n 1\n";
-	#print RM "#BSUB -q ding-lab\n";
-	print RM "#BSUB -R \"span[hosts=1] rusage[mem=10000]\"","\n";
-    #print RM "#BSUB -R \"rusage[mem=40000]\"","\n";
-    print RM "#BSUB -M 10000000\n";
-    print RM "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RM "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RM "#BSUB -J $current_job_file\[1-$file_number_of_RepeatMasker\]\n";
-	print RM "#BSUB -w \"$hold_job_file\"","\n";	
-	print RM "RM_IN=".$sample_full_path."/".$sample_name.".fa\n";
-	#####################
-	print RM "RM_dir=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
-	#print RM "#\$ -t 1-$file_number_of_RepeatMasker:1","\n";
-	print RM "RMOUT=",'${RM_dir}',"/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa.masked","\n";
-	print RM "RMIN=",'${RM_dir}',"/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}',".fa\n";
-	print RM "RMOTHER=",'${RM_dir}',"/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa.out","\n\n";	
-	print RM 'if [ -f $RMIN ]',"\n"; # input file exist
-	print RM "then\n";
-	print RM '  if [ ! -s $RMOUT ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
-    print RM "  then\n";
-    #print RM '      while [ ! -s $RMOUT ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
-   # print RM "      do\n"; # run RepeatMasker until it finishes
-    print RM "          RepeatMasker -pa 4 \$RMIN \n";
-   # print RM "      done\n";
-    print RM "  fi\n\n";
-	print RM '	if [ ! -f $RMOTHER ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
-	print RM "	then\n";
-	print RM '		while [ ! -f $RMOTHER  ]',"\n"; # don't have RepeatMasker output ".out" file, means RepeatMasker never ran or finished
-	print RM "		do\n"; # run RepeatMasker until it finishes
-	print RM "			RepeatMasker -pa 4 \$RMIN \n"; 
-	print RM " 		done\n";
-	print RM "	fi\n\n";
- 	print RM '	if [ ! -f $RMOUT ]',"\n"; #sometimes repeatmasker does not find any repeat in input files, in these cases no .masked file will be generated.
-	print RM "	then\n";
-	print RM '		cp ${RMIN} ${RMOUT}',"\n";
-	print RM "	fi\n";
-	print RM "fi\n";
-	close RM;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-	#print $bsub_com, "\n";
-        #$bsub_com = "qsub -V -l h_vmem=4G  -hold_jid $hold_job_file,$hold_RM_job -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com)
+
+    # Job script name (as requested)
+    $current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
+
+    # Logs (use %I for array index)
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+
+    `rm -f $lsf_out`;
+    `rm -f $lsf_err`;
+
+    open(my $RM, ">", "$job_files_dir/$current_job_file") or die $!;
+
+    print $RM "#!/bin/bash\n";
+    print $RM "set -euo pipefail\n\n";
+
+    print $RM "RM_dir=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
+    print $RM "RMIN=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa\n";
+    print $RM "RMOUT=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa.masked\n\n";
+
+    print $RM 'if [ -s "$RMIN" ]',"\n";
+    print $RM "then\n";
+    print $RM '  if [ ! -s "$RMOUT" ]',"\n";
+    print $RM "  then\n";
+    print $RM '    RepeatMasker -pa 4 "$RMIN"',"\n";
+    print $RM "  fi\n\n";
+    print $RM '  if [ ! -f "$RMOUT" ]',"\n";
+    print $RM "  then\n";
+    print $RM '    cp "$RMIN" "$RMOUT"',"\n";
+    print $RM "  fi\n";
+    print $RM "fi\n";
+
+    close($RM);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    # Optional dependency
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    # Submit as an array job using docker (step1/2 style)
+    $bsub_com =
+        "bsub -g /$compute_username/$group_name -q $q_name " .
+        "-J \"$current_job_file\[1-$file_number_of_RepeatMasker\]\" " .
+        "$dep" .
+        "-n 1 " .
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" " .
+        "-M 10000000 " .
+        "-a 'docker(scao/virusscan:0.0.2)' " .
+        "-o $lsf_out -e $lsf_err " .
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
