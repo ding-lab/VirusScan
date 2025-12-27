@@ -8,5 +8,7 @@ conda env export -n virusscan > env.yaml
 docker build -f ./Dockerfile -t scao/virusscan:0.0.2 .
 
 
+docker run --rm -it scao/virusscan:0.0.2 bash
+
 docker push scao/virusscan:0.0.2
 ~                                     
