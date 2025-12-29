@@ -589,7 +589,7 @@ sub submit_job_array_RM {
     print $RM "then\n";
     print $RM '  if [ ! -s "$RMOUT" ]',"\n";
     print $RM "  then\n";
-    print $RM '    RepeatMasker -pa 4 "$RMIN"',"\n";
+    print $RM '     /opt/conda/envs/virusscan/bin/RepeatMasker -pa 4 "$RMIN"',"\n";
     print $RM "  fi\n\n";
     print $RM '  if [ ! -f "$RMOUT" ]',"\n";
     print $RM "  then\n";
