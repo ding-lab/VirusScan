@@ -134,9 +134,9 @@ my $working_name= (split(/\//,$run_dir))[-2];
 # The number of small fasta files to split to from a large file for RepeatMasker
 my $file_number_of_RepeatMasker = 100; #default 
 # the number of small fasta files to split to from a large file for Blast_Reference_Genome
-my $file_number_of_Blast_Ref_Genome = 100; #default
+my $file_number_of_Blast_Ref_Genome = 2; #default
 # the number of small fasta files to split to from a large file for Blast_N
-my $file_number_of_Blast_N = 100; #default
+my $file_number_of_Blast_N = 2; #default
 # the number of small fasta files to split to from a large file for Blast_X
 #my $file_number_of_Blast_X = 200; #default
 
@@ -420,7 +420,6 @@ sub check_input_dir {
 }
 
 ########################################################################
-########################################################################
 sub bsub_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
@@ -443,125 +442,135 @@ sub bsub_bwa{
 
     my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
     my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
-    `rm $lsf_out`;
-    `rm $lsf_err`;
+    rm $lsf_out;
+    rm $lsf_err;
 
-    open(BWA, ">$job_files_dir/$current_job_file") or die $!;
+    open(my $BWA, ">$job_files_dir/$current_job_file") or die $!;
 
-    print BWA "#!/bin/bash\n";
-	print BWA "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
-    print BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
-    print BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
-    print BWA "BWA_sai=".$sample_full_path."/".$sample_name.".sai\n";
+    print $BWA "#!/bin/bash\n";
+	print $BWA "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
+    print $BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
+    print $BWA "BWA_sai=".$sample_full_path."/".$sample_name.".sai\n";
     #print BWA "BWA_sam=".$sample_full_path."/".$sample_name.".sam\n";
     #print BWA "BWA_bam=".$sample_full_path."/".$sample_name.".realign.bam\n";
     #print BWA "BWA_mapped_bam=".$sample_full_path."/".$sample_name.".mapped.bam\n";
-    print BWA "BWA_mapped=".$sample_full_path."/".$sample_name.".mapped.reads\n";
-    print BWA "BWA_fa=".$sample_full_path."/".$sample_name.".fa\n";
+    print $BWA "BWA_mapped=".$sample_full_path."/".$sample_name.".mapped.reads\n";
+    print $BWA "BWA_fa=".$sample_full_path."/".$sample_name.".fa\n";
 	#print BWA 
-	print BWA 'if [ ! -s $BWA_mapped ]',"\n";
-    print BWA "    then\n";
-	print BWA "rm \${BWA_sai}","\n";
-	print BWA "rm \${BWA_fq}","\n";
+	print $BWA 'if [ ! -s $BWA_mapped ]',"\n";
+    print $BWA "    then\n";
+	print $BWA "rm \${BWA_sai}","\n";
+	print $BWA "rm \${BWA_fq}","\n";
 	#print BWA "mkfifo \${BWA_sai}","\n";
-	print BWA "mkfifo \${BWA_fq}","\n";
+	print $BWA "mkfifo \${BWA_fq}","\n";
 	#0x100: secondary alignment
 	#0x800: supplementary alignment
     #H: Hard clipping
 	#S: Soft clipping
-	print BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
+	print $BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
     #print BWA "bwa aln $bwa_ref -b0 \${BWA_IN} > \${BWA_sai} \&","\n";	
-    print BWA "bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
-    print BWA 'rm ${BWA_fq}',"\n";
-	print BWA "mkfifo \${BWA_fq}","\n";
-    print BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
+    print $BWA "bwa aln $bwa_ref \${BWA_fq} > \${BWA_sai}","\n";
+    print $BWA 'rm ${BWA_fq}',"\n";
+	print $BWA "mkfifo \${BWA_fq}","\n";
+    print $BWA "samtools view -h \${BWA_IN} | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); \$flag=\$ss[1]; \$cigar=\$ss[5]; if(\$ss[0]=~/^\@/ || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && ((\$flag & 0x4) || (\$cigar=~/S/))) || (!((\$flag & 0x100) || (\$flag & 0x800) || (\$cigar=~/H/)) && (\$ss[2]=~/^gi/))) { print \$line;}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
 	#print BWA "samtools view -h \${BWA_IN} | gawk \'{if (substr(\$1,1,1)==\"\@\" || (and(\$2,0x4) || and(\$2,0x8) )) print}\' | samtools view -Sb - | bamtools convert -format fastq > \${BWA_fq} \&","\n";
-	print BWA "bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} | grep -v \@SQ | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
-	print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
-    print BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-	print BWA 'rm ${BWA_sai}',"\n";
-	print BWA 'rm ${BWA_fq}',"\n";
-	print BWA "else\n";
-    print BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
-    print BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
-    print BWA "   fi\n";
-    close BWA;
+	print $BWA "bwa samse $bwa_ref \${BWA_sai} \${BWA_fq} | grep -v \@SQ | perl -ne \'\$line=\$_; \@ss=split(\"\\t\",\$line); if(\$ss[2]=~/^gi/) { print \$line; }\' > \${BWA_mapped}","\n";
+	print $BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
+    print $BWA " 	".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
+	print $BWA 'rm ${BWA_sai}',"\n";
+	print $BWA 'rm ${BWA_fq}',"\n";
+	print $BWA "else\n";
+    print $BWA "     ".$run_script_path."get_fasta_from_bam_filter.pl \${BWA_mapped} \${BWA_fa}\n";
+    print $BWA "     ".$run_script_path."trim_readid.pl \${BWA_fa} \${BWA_fa}.cdhit_out\n";
+    print $BWA "   fi\n";
+    close $BWA;
 
-	my $sh_file=$job_files_dir."/".$current_job_file;
+    my $sh_file = $job_files_dir."/".$current_job_file;
 
-    #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
+    # Submit with docker + mounts (following seq_QC style)
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
+        "bsub -g /$compute_username/$group_name -q $q_name " .
+        "-J \"$current_job_file\" " .
+        "-n 1 " .
+        "-R \"span[hosts=1] select[mem>30000] rusage[mem=30000]\" " .
+        "-M 30000000 " .
+        "-a 'docker(scao/virusscan:0.0.2)' " .
+        "-o $lsf_out -e $lsf_err " .
+        "bash $sh_file\n";
 
-    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.2)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
     print $bsub_com;
-    system ($bsub_com);
-
+    system($bsub_com);
 
 }
+
 
 #####################################################################################
 
 sub split_for_RepeatMasker {
-	#split file for RepeatMasker
-	# my ($step_by_step) = @_;
-	# if ($step_by_step) {
-	# 	$hold_job_file = "";
-	# }else{
-	# 	$hold_job_file = $current_job_file;
-	# }
+    # split file for RepeatMasker
 
-	$current_job_file = "j2_".$sample_name."_RM_split_".$$.".sh";
-	
-    my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
-    my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
-    `rm $lsf_out`;
-    `rm $lsf_err`;
-	
-	open(RMSPLIT, ">$job_files_dir/$current_job_file") or die $!;
-	print RMSPLIT "#!/bin/bash\n";
-	print RMSPLIT "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
-   # print RMSPLIT "#BSUB -J $current_job_file\n";
-	print RMSPLIT "RMSPLIT_IN=".$sample_full_path."/".$sample_name.".fa\n";
-#	print RMSPLIT "#BSUB -w \"$hold_job_file\"","\n";	
-	#####################
-	print RMSPLIT "RM_DIR=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
-	print RMSPLIT "SAMPLE_DIR=".$sample_full_path."\n\n";
-	print RMSPLIT "if [ ! -d \${RM_DIR} ]\n";
-	print RMSPLIT "then\n";
-	print RMSPLIT "	mkdir \${RM_DIR}\n";
-	print RMSPLIT "	".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out -o \${RM_DIR} -n $file_number_of_RepeatMasker -p ".$sample_name.".fa.cdhit_out_file\n";
-	print RMSPLIT "	".$run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
-	print RMSPLIT '	CHECK=$?',"\n";
-	print RMSPLIT '	while [ ${CHECK} -eq 10 ]',"\n"; # 10 is the error exit code of check_split_cdhit.pl. It will check whether split_cdhit is correctly completed, if not correctly completed
-	print RMSPLIT "	do\n"; # run split and check again
-	print RMSPLIT "		".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out -o \${RM_DIR} -n $file_number_of_RepeatMasker -p ".$sample_name.".fa.cdhit_out_file\n";
-	print RMSPLIT "		".$run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
-	print RMSPLIT '		CHECK=$?',"\n";
-	print RMSPLIT "	done\n";
-	print RMSPLIT "else\n"; # RepeatMasker directory already existed (file already splited)
- 	print RMSPLIT "	".$run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
-	print RMSPLIT '	CHECK=$?',"\n";
-    #check if spliting file is correctly completed, if not correctly completed. check again
- 	print RMSPLIT '	while [ ${CHECK} -eq 10 ]',"\n";
-	print RMSPLIT "	do\n";# check again
-	print RMSPLIT "		".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out -o \${RM_DIR} -n $file_number_of_RepeatMasker -p ".$sample_name.".fa.cdhit_out_file\n";
-	print RMSPLIT "		".$run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
-	print RMSPLIT '		CHECK=$?',"\n";
-	print RMSPLIT "	done\n";
-	print RMSPLIT "fi\n";
-	close RMSPLIT;
+    $current_job_file = "j2_".$sample_name."_RM_split".".sh";
 
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
 
-	my $sh_file=$job_files_dir."/".$current_job_file;
+    `rm -f $lsf_out`;
+    `rm -f $lsf_err`;
 
-    #$bsub_com = "LSF_DOCKER_PRESERVE_ENVIRONMENT=false bsub -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/dailybox)\' -o $lsf_out -e $lsf_err bash $sh_file\n";     
+    open(my $RMSPLIT, ">", "$job_files_dir/$current_job_file") or die $!;
 
-    $bsub_com = "bsub -g /$compute_username/$group_name -q $q_name -n 1 -R \"select[mem>30000] rusage[mem=30000]\" -M 30000000 -a \'docker(scao/virusscan:0.0.2)\' -o $lsf_out -e $lsf_err bash $sh_file\n";
+    print $RMSPLIT "#!/bin/bash\n";
+    print $RMSPLIT "set -euo pipefail\n\n";
+    print $RMSPLIT "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    # inputs/dirs
+    print $RMSPLIT "RMSPLIT_IN=".$sample_full_path."/".$sample_name.".fa\n";
+    print $RMSPLIT "RM_DIR=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
+    print $RMSPLIT "SAMPLE_DIR=".$sample_full_path."\n\n";
+
+    # create dir if missing
+    print $RMSPLIT 'if [ ! -d "${RM_DIR}" ]',"\n";
+    print $RMSPLIT "then\n";
+    print $RMSPLIT '  mkdir -p "${RM_DIR}"',"\n";
+    print $RMSPLIT "fi\n\n";
+
+    # run split + check, retry if needed
+    print $RMSPLIT $run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.
+                   ".fa.cdhit_out -o \${RM_DIR} -n $file_number_of_RepeatMasker -p ".
+                   $sample_name.".fa.cdhit_out_file\n";
+    print $RMSPLIT $run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
+    print $RMSPLIT "CHECK=\$?\n";
+    print $RMSPLIT "while [ \${CHECK} -eq 10 ]\n";
+    print $RMSPLIT "do\n";
+    print $RMSPLIT "  ".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.
+                   ".fa.cdhit_out -o \${RM_DIR} -n $file_number_of_RepeatMasker -p ".
+                   $sample_name.".fa.cdhit_out_file\n";
+    print $RMSPLIT "  ".$run_script_path."check_split_cdhit.pl \${SAMPLE_DIR}\n";
+    print $RMSPLIT "  CHECK=\$?\n";
+    print $RMSPLIT "done\n";
+
+    close($RMSPLIT);
+
+    my $sh_file = $job_files_dir."/".$current_job_file;
+
+    # Submit with docker and mounts (following seq_QC style)
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
+        "bsub -g /$compute_username/$group_name -q $q_name " .
+        "-J \"$current_job_file\" " .
+        "-n 1 " .
+        "-R \"span[hosts=1] select[mem>30000] rusage[mem=30000]\" " .
+        "-M 30000000 " .
+        "-a 'docker(scao/virusscan:0.0.2)' " .
+        "-o $lsf_out -e $lsf_err " .
+        "bash $sh_file\n";
+
     print $bsub_com;
-    system ($bsub_com);
-
-	# $bsub_com = "bsub < $job_files_dir/$current_job_file";	
-	# #$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	# system ($bsub_com);
+    system($bsub_com);
 }
 
 
@@ -659,593 +668,604 @@ sub submit_job_array_RM {
 #####################################################################################
 
 sub seq_QC {
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
-	$current_job_file = "j4_".$sample_name."_QC_".$$.".sh";
-	open(QC, ">$job_files_dir/$current_job_file") or die $!;
-	print QC "#!/bin/bash\n";
-    print QC "#BSUB -n 1\n";
-    print QC "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print QC "#BSUB -M 10000000\n";
-    print QC "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print QC "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print QC "#BSUB -J $current_job_file\n";
-	print QC "#BSUB -w \"$hold_job_file\"","\n";	
-	#####################
-	print QC "SAMPLE_DIR=".$sample_full_path."\n";
-	print QC "QC_OUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n\n";
-	print QC "f_fa=".$sample_full_path."/".$sample_name.".fa\n";
-	print QC 'if [ ! -f $QC_OUT] && [ -s $f_fa]',"\n";
-	print QC "then\n";
-	print QC "	".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
-	print QC "	".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
-	print QC '	CHECK=$?',"\n";
-	print QC '	while [ ${CHECK} -eq 10 ]',"\n";#10 is the exit code of check_SequenceQualityControl.pl if it is not correctly completed.
-	print QC "	do\n";#run split and check again
-	print QC "		".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
-	print QC "		".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";	
-	print QC '		CHECK=$?',"\n";
- 	print QC "	done\n";
-	print QC "else\n";
-	print QC "	".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
-	print QC '	CHECK=$?',"\n";
-    #check if parsed file is completed, if not completed. check again
-	print QC '	while [ ${CHECK} -eq 10 ]',"\n";
-	print QC "	do\n";#run parser again
-	print QC "		".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
-	print QC "		".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
-	print QC '		CHECK=$?',"\n";
-	print QC '              CHECK=1',"\n";
-    print QC "	done\n";
-	print QC "fi\n";
-	close QC;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    my ($step_by_step) = @_;
+
+    if ($step_by_step) {
+        $hold_job_file = "";
+    } else {
+        $hold_job_file = $current_job_file;
+    }
+
+    $current_job_file = "j4_".$sample_name."_QC".".sh";
+
+  	my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
+
+    `rm -f $lsf_out`;
+    `rm -f $lsf_err`;
+
+    open(my $QC, ">", "$job_files_dir/$current_job_file") or die $!;
+
+    print $QC "#!/bin/bash\n";
+    print $QC "set -euo pipefail\n\n";
+
+    print $QC "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    print $QC "SAMPLE_DIR=".$sample_full_path."\n";
+    print $QC "QC_OUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";
+    print $QC "f_fa=".$sample_full_path."/".$sample_name.".fa\n\n";
+
+    print $QC 'if [ ! -f "$QC_OUT" ] && [ -s "$f_fa" ]',"\n";
+    print $QC "then\n";
+    print $QC "    ".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
+    print $QC "    ".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
+    print $QC "    CHECK=\$?\n";
+    print $QC "    while [ \${CHECK} -eq 10 ]\n";
+    print $QC "    do\n";
+    print $QC "        ".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
+    print $QC "        ".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
+    print $QC "        CHECK=\$?\n";
+    print $QC "    done\n";
+    print $QC "else\n";
+    print $QC "    ".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
+    print $QC "    CHECK=\$?\n";
+    print $QC "    while [ \${CHECK} -eq 10 ]\n";
+    print $QC "    do\n";
+    print $QC "        ".$run_script_path."SequenceQualityControl.pl ".$sample_full_path."\n";
+    print $QC "        ".$run_script_path."check_SequenceQualityControl.pl \${SAMPLE_DIR}\n";
+    print $QC "        CHECK=\$?\n";
+    print $QC "    done\n";
+    print $QC "fi\n";
+
+    close($QC);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
+        "bsub -g /$compute_username/$group_name -q $q_name " .
+        "-J \"$current_job_file\" " .
+        "$dep" .
+        "-n 1 " .
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" " .
+        "-M 10000000 " .
+        "-a 'docker(scao/virusscan:0.0.2)' " .
+        "-o $lsf_out -e $lsf_err " .
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
+
+}
+
+#####################################################################################
+sub split_for_blast_RefG {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
+
+    $current_job_file = "j5_".$sample_name."_RefG_split".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $RefGS, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $RefGS "#!/bin/bash\n";
+    print $RefGS "set -euo pipefail\n\n";
+    print $RefGS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    print $RefGS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
+    print $RefGS "SAMPLE_DIR=".$sample_full_path."\n\n";
+
+    print $RefGS 'if [ ! -d "$RefG_DIR" ]',"\n";
+    print $RefGS "then\n";
+    print $RefGS "  mkdir -p \"\${RefG_DIR}\"\n";
+    print $RefGS "fi\n\n";
+
+    print $RefGS $run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.
+                 ".fa.cdhit_out.masked.goodSeq -o \${RefG_DIR} -n $file_number_of_Blast_Ref_Genome -p ".
+                 $sample_name.".fa.cdhit_out.masked.goodSeq_file\n";
+    print $RefGS $run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
+    print $RefGS "CHECK=\$?\n";
+    print $RefGS "while [ \${CHECK} -eq 10 ]\n";
+    print $RefGS "do\n";
+    print $RefGS "  ".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.
+                 ".fa.cdhit_out.masked.goodSeq -o \${RefG_DIR} -n $file_number_of_Blast_Ref_Genome -p ".
+                 $sample_name.".fa.cdhit_out.masked.goodSeq_file\n";
+    print $RefGS "  ".$run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
+    print $RefGS "  CHECK=\$?\n";
+    print $RefGS "done\n";
+    close($RefGS);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" ".
+        "-M 10000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub split_for_blast_RefG{
-	#split file for RefG blast
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub submit_job_array_blast_RefG {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	$current_job_file = "j5_".$sample_name."_RefG_split_".$$.".sh";
-	open(RefGS, ">$job_files_dir/$current_job_file") or die $!;
-	print RefGS "#!/bin/bash\n";
-	print RefGS "#BSUB -n 1\n";
-    print RefGS "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print RefGS "#BSUB -M 10000000\n";
-    print RefGS "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RefGS "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RefGS "#BSUB -J $current_job_file\n";
-	print RefGS "#BSUB -w \"$hold_job_file\"","\n";	
-	############################
-	print RefGS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
-	print RefGS "SAMPLE_DIR=".$sample_full_path."\n\n";
-	print RefGS 'if [ ! -d $RefG_DIR ]',"\n";
-	print RefGS "then\n";
-	print RefGS "	mkdir \${RefG_DIR}\n";
-	print RefGS "	".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq -o \${RefG_DIR} -n $file_number_of_Blast_Ref_Genome -p ".$sample_name.".fa.cdhit_out.masked.goodSeq_file\n";
-	print RefGS "	".$run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
-	print RefGS '	CHECK=$?',"\n";	
-	print RefGS '	while [ ${CHECK} -eq 10 ]',"\n";#10 is the error exit code of it is not correctly completed.
-	print RefGS "	do\n";#run split and check again
-	print RefGS "		".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq -o \${RefG_DIR} -n $file_number_of_Blast_Ref_Genome -p ".$sample_name.".fa.cdhit_out.masked.goodSeq_file\n";
-	print RefGS "	".$run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
-	print RefGS '		CHECK=$?',"\n";
-	print RefGS "	done\n";
-	print RefGS "else\n";
-	print RefGS "	".$run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
-	print RefGS '	CHECK=$?',"\n";
-    #check if parsed file is completed, if not completed. check again
-	print RefGS '	while [ ${CHECK} -eq 10 ]',"\n";
-	print RefGS "	do\n";#run parser again
-	print RefGS "		".$run_script_path."split_fasta.pl -i ".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq -o \${RefG_DIR} -n $file_number_of_Blast_Ref_Genome -p ".$sample_name.".fa.cdhit_out.masked.goodSeq_file\n";
-	print RefGS "		".$run_script_path."check_split_RefG.pl \${SAMPLE_DIR}\n";
-	print RefGS '		CHECK=$?',"\n";
-	print RefGS "	done\n";
-	print RefGS "fi\n";
-	close RefGS;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    $current_job_file = "j6_".$sample_name."_BRefG".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $RefG, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $RefG "#!/bin/bash\n";
+    print $RefG "set -euo pipefail\n\n";
+    print $RefG "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $RefG "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
+
+    print $RefG "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
+    print $RefG "BlastRefGOUT=".'${RefG_DIR}'."/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${JOBIDX}'.".RefGblast.out\n";
+    print $RefG "QUERY=".'${RefG_DIR}'."/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${JOBIDX}'.".fa\n\n";
+
+    print $RefG 'if [ -s "$QUERY" ]',"\n";
+    print $RefG "then\n";
+    print $RefG '  CHECK=1',"\n";
+    print $RefG '  while [ $CHECK -ne 0 ]',"\n";
+    print $RefG "  do\n";
+    print $RefG "    blastn -evalue 1e-9 -show_gis -num_threads 4 -num_descriptions 2 -num_alignments 2 -query \"\${QUERY}\" -out \"\${BlastRefGOUT}\" -db $reference_genome\n";
+    print $RefG '    tail -10 "${BlastRefGOUT}" | grep -q Matrix',"\n";
+    print $RefG '    CHECK=$?',"\n";
+    print $RefG "  done\n";
+    print $RefG "fi\n";
+    close($RefG);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\[1-$file_number_of_Blast_Ref_Genome\]\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>20000] rusage[mem=20000]\" ".
+        "-M 20000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub submit_job_array_blast_RefG{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub parse_blast_RefG {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	$current_job_file = "j6_".$sample_name."_BRefG_".$$.".sh";
-	open (RefG, ">$job_files_dir/$current_job_file") or die $!;
-	print RefG "#!/bin/bash\n";
-	print RefG "#BSUB -n 1\n";
-    print RefG "#BSUB -R \"span[hosts=1] rusage[mem=20000]\"","\n";
-    print RefG "#BSUB -M 20000000\n";
-    print RefG "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print RefG "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print RefG "#BSUB -J $current_job_file\[1-$file_number_of_Blast_Ref_Genome\]\n";
-	print RefG "#BSUB -w \"$hold_job_file\"","\n";	
-	
-	####################
-	print RefG "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
-	#print RefG "#\$ -t 1-$file_number_of_Blast_Ref_Genome:1","\n"; #the number must be a digital value in the .sh job file, cannot be calculated when the job submitted
-	print RefG "BlastRefGOUT=",'${RefG_DIR}',"/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${LSB_JOBINDEX}',".RefGblast.out\n";
-	print RefG "QUERY=",'${RefG_DIR}',"/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${LSB_JOBINDEX}'.".fa\n\n";
-	print RefG 'if [ -s $QUERY ]',"\n"; #modified by song: check if a file is empty.
-	print RefG "then\n";
-	#if blast output file does not exist, do blast and check the completeness of output
-	print RefG '	if [ ! -f $BlastRefGOUT ]',"\n";
-	print RefG "	then\n";
-	print RefG "		blastn -evalue  1e-9   -show_gis  -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
-	print RefG '		tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
-	print RefG '		CHECK=$?',"\n";
-	print RefG '		while [ ${CHECK} -eq 1 ]',"\n";
-	print RefG "		do\n";
-	print RefG "			blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
-	print RefG '			tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
-	print RefG '			CHECK=$?',"\n";
-	print RefG "		done\n";
-	#if blast output file exists, check the completeness of output
-	print RefG "	else\n";
-	print RefG '		tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
-	print RefG '		CHECK=$?',"\n";
-	print RefG '		while [ ${CHECK} -eq 1 ]',"\n";
-	print RefG "		do\n";
-	print RefG "			blastn -evalue  1e-9   -show_gis -num_threads 4 -num_descriptions 2  -num_alignments 2  -query  \${QUERY}  -out \${BlastRefGOUT} -db $reference_genome","\n";
-	print RefG '			tail -10 ${BlastRefGOUT}|grep Matrix',"\n";
-	print RefG '			CHECK=$?',"\n";
-	print RefG "		done\n";
-	print RefG "	fi\n";
-	print RefG "fi";
-	close RefG;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -l h_vmem=10G -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    $current_job_file = "j7_".$sample_name."_PRefG".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $PRefG, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $PRefG "#!/bin/bash\n";
+    print $PRefG "set -euo pipefail\n\n";
+    print $PRefG "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $PRefG "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
+
+    print $PRefG "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
+    print $PRefG "BlastRefGOUT=".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${JOBIDX}'.".RefGblast.out\n";
+    print $PRefG "BlastRefGIN=".'${RefG_DIR}'."/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${JOBIDX}'.".fa\n";
+    print $PRefG "PARSED=".'${RefG_DIR}'."/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${JOBIDX}'.".RefGblast.parsed\n\n";
+
+    print $PRefG 'if [ -s "$BlastRefGIN" ]',"\n";
+    print $PRefG "then\n";
+    print $PRefG '  CHECK=1',"\n";
+    print $PRefG '  while [ $CHECK -ne 0 ]',"\n";
+    print $PRefG "  do\n";
+    print $PRefG "    ".$run_script_path."BLASTn_RefGenome_parser.pl \"\${RefG_DIR}\" \"\${BlastRefGOUT}\" $refrence_genome_taxonomy\n";
+    print $PRefG '    tail -5 "$PARSED" | grep -q Summary',"\n";
+    print $PRefG '    CHECK=$?',"\n";
+    print $PRefG "  done\n";
+    print $PRefG "fi\n";
+    close($PRefG);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\[1-$file_number_of_Blast_Ref_Genome\]\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" ".
+        "-M 10000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub parse_blast_RefG{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub pool_split_for_blast_N {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-   # $current_job_file = "j10_".$sample_name."_PBN_".$$.".sh";
-    my $BND=$sample_full_path."/".$sample_name.".".$BLAST_RefG_DIR_SUFFIX;
-    #if	
-    #my $nn1=`tail $BND/*.out | grep Matrix | wc -l`;
-    #my $nn2=`ls $BND/*.out | wc -l`;
-    #print $nn1,"\n";
-    #print $nn2,"\n";
-    #if($nn1 != $nn2) { print "resubmitted blastHG for $sample_name","\n"; &submit_job_array_blast_RefG(1);  }
-	#else {
-	$current_job_file = "j7_".$sample_name."_PRefG_".$$.".sh";
-	open (PRefG, ">$job_files_dir/$current_job_file") or die $!;
-	print PRefG "#!/bin/bash\n";
-	print PRefG "#BSUB -n 1\n";
-    print PRefG "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print PRefG "#BSUB -M 10000000\n";
-    print PRefG "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print PRefG "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print PRefG "#BSUB -J $current_job_file\[1-$file_number_of_Blast_Ref_Genome\]\n";
-	print PRefG "#BSUB -w \"$hold_job_file\"","\n";	
-	#################################
-	print PRefG "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
-	#print PRefG "#\$ -t 1-$file_number_of_Blast_Ref_Genome:1","\n";#must be a decimal number
-	print PRefG "BlastRefGOUT=${sample_name}.fa.cdhit_out.masked.goodSeq_file".'${LSB_JOBINDEX}',".RefGblast.out\n";#name only, not full path
-	print PRefG "BlastRefGIN=",'${RefG_DIR}',"/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${LSB_JOBINDEX}'.".fa\n";#full path
-	print PRefG "PARSED=",'${RefG_DIR}',"/".$sample_name.".fa.cdhit_out.masked.goodSeq_file".'${LSB_JOBINDEX}'.".RefGblast.parsed\n\n";
-	print PRefG 'if [ -s $BlastRefGIN ]',"\n"; # change -f to -s 
-	print PRefG "then\n";
-	#if the parsed file does not exist, run parser and check the completeness of the parsed file
-	print PRefG '	if [ ! -f $PARSED ]',"\n";
-	print PRefG "	then\n";
-	print PRefG "		".$run_script_path."BLASTn_RefGenome_parser.pl \${RefG_DIR} \${BlastRefGOUT} $refrence_genome_taxonomy\n";
-	#check the completeess of parse
-	print PRefG '		tail -5 ${PARSED}|grep Summary',"\n";
-	print PRefG '		CHECK=$?',"\n";
-	# rerun if not completed
-	print PRefG '		while [ ${CHECK} -eq 1 ]',"\n";
-	print PRefG "		do\n";#run parse again
-	print PRefG "			".$run_script_path."BLASTn_RefGenome_parser.pl  \${RefG_DIR} \${BlastRefGOUT} $refrence_genome_taxonomy \n";
-	#check the completeess of parse
-	print PRefG '			tail -5 ${PARSED}|grep Summary',"\n";
-	print PRefG '			CHECK=$?',"\n";
-	print PRefG "		done\n";
-	#if the parsed file exists, check the completeness of the parsed file
-	print PRefG "	else\n";
-	print PRefG '		tail -5 ${PARSED}|grep Summary',"\n";
-	print PRefG '		CHECK=$?',"\n";
-	print PRefG '		while [ ${CHECK} -eq 1 ]',"\n"; #not complete
-	print PRefG "		do\n";
-	print PRefG "			".$run_script_path."BLASTn_RefGenome_parser.pl \${RefG_DIR} \${BlastRefGOUT} $refrence_genome_taxonomy \n";
-	print PRefG '			tail -5 ${PARSED}|grep Summary',"\n";
-	print PRefG '			CHECK=$?',"\n";
-	print PRefG "		done\n";
-	print PRefG "	fi\n";
-	print PRefG "fi";
-	close PRefG;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
-	#}
+    $current_job_file = "j8_".$sample_name."_BN_split".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $BNS, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $BNS "#!/bin/bash\n";
+    print $BNS "set -euo pipefail\n\n";
+    print $BNS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    print $BNS "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
+    print $BNS "SAMPLE_DIR=".$sample_full_path."\n";
+    print $BNS "RefGFiltered_fa=".$sample_full_path."/".$sample_name.".RefGfiltered.fa\n";
+    print $BNS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n\n";
+
+    print $BNS 'mkdir -p "$BN_DIR"',"\n";
+    print $BNS 'rm -f "$RefGFiltered_fa" || true',"\n";
+    print $BNS 'cat ${RefG_DIR}/*.RefGfiltered.fa >> "$RefGFiltered_fa"',"\n";
+
+    print $BNS $run_script_path."check_split_BN.pl \${SAMPLE_DIR}\n";
+    print $BNS "CHECK=\$?\n";
+    print $BNS "while [ \${CHECK} -eq 10 ]\n";
+    print $BNS "do\n";
+    print $BNS "  ".$run_script_path."split_fasta.pl -i \"\${RefGFiltered_fa}\" -o \"\${BN_DIR}\" -n $file_number_of_Blast_N -p ".$sample_name.".RefGfiltered.fa_file\n";
+    print $BNS "  ".$run_script_path."check_split_BN.pl \${SAMPLE_DIR}\n";
+    print $BNS "  CHECK=\$?\n";
+    print $BNS "done\n";
+    close($BNS);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" ".
+        "-M 10000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub pool_split_for_blast_N{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub submit_job_array_blast_N {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	$current_job_file = "j8_".$sample_name."_BN_split_".$$.".sh";
-	open(BNS, ">$job_files_dir/$current_job_file") or die $!;
-	print BNS "#!/bin/bash\n";
-	print BNS "#BSUB -n 1\n";
-    print BNS "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print BNS "#BSUB -M 10000000\n";
-    print BNS "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print BNS "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print BNS "#BSUB -J $current_job_file\n";
-	print BNS "#BSUB -w \"$hold_job_file\"","\n";	
-	############################
-	print BNS "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
-	print BNS "SAMPLE_DIR=".$sample_full_path."\n";
-	print BNS "RefGFiltered_fa=".$sample_full_path."/".$sample_name.".RefGfiltered.fa\n";
-	print BNS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n\n";
-	print BNS 'if [ ! -d $BN_DIR ] ',"\n";
-	print BNS "then\n";
-	print BNS "	mkdir \${BN_DIR}\n";
-	print BNS "fi\n";
-	print BNS 'if [ -f $RefGFiltered_fa ] ',"\n";
-	print BNS "then\n";
-	print BNS "	rm \${RefGFiltered_fa}\n";
-	print BNS "fi\n";
-	print BNS "cat \${RefG_DIR}/*.RefGfiltered.fa >> \${RefGFiltered_fa}\n";
-	print BNS "".$run_script_path."check_split_BN.pl \${SAMPLE_DIR}\n";
-	print BNS 'CHECK=$?',"\n";
-	print BNS 'while [ ${CHECK} -eq 10 ]',"\n"; #10 is the exit code of check_split_BN.pl. Check whether it is correctly completed, if not rerun split and check again.
-	print BNS "do\n";
-	# split to -n number of files, this number should be consistent with 
-	# the number of blastn job array submitted bellow
-	print BNS "	".$run_script_path."split_fasta.pl -i \${RefGFiltered_fa} -o \${BN_DIR} -n $file_number_of_Blast_N -p ".$sample_name.".RefGfiltered.fa_file\n";
-	print BNS "	".$run_script_path."check_split_BN.pl \${SAMPLE_DIR}\n";
-	print BNS '	CHECK=$?',"\n";
-	print BNS "done\n";
-	close BNS;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    $current_job_file = "j9_".$sample_name."_BN".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $BN, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $BN "#!/bin/bash\n";
+    print $BN "set -euo pipefail\n\n";
+    print $BN "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $BN "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
+
+    print $BN "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
+    print $BN "BlastNOUT=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.out\n";
+    print $BN "QUERY=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".fa\n\n";
+
+    print $BN 'if [ -s "$QUERY" ]',"\n";
+    print $BN "then\n";
+    print $BN '  CHECK1=1',"\n";
+    print $BN '  CHECK2=0',"\n";
+    print $BN '  while [ ${CHECK1} -ne 0 ] || [ ${CHECK2} -eq 0 ]',"\n";
+    print $BN "  do\n";
+    print $BN "    blastn -evalue 1e-9 -show_gis -num_threads 4 -query \"\${QUERY}\" -out \"\${BlastNOUT}\" -db $db_BN\n";
+    print $BN '    tail -5 "${BlastNOUT}" | grep -q Matrix',"\n";
+    print $BN '    CHECK1=$?',"\n";
+    print $BN '    grep -q "no longer exists in database" "${BlastNOUT}"',"\n";
+    print $BN '    if [ $? -eq 0 ]; then CHECK2=0; else CHECK2=1; fi',"\n";
+    print $BN "  done\n";
+    print $BN "fi\n";
+    close($BN);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\[1-$file_number_of_Blast_N\]\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>40000] rusage[mem=40000]\" ".
+        "-M 40000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub submit_job_array_blast_N{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub parse_blast_N {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	my $BND=$sample_full_path."/".$sample_name.".".$BLAST_NT_DIR_SUFFIX;
-  
-    #my $nn1=`tail $BND/*.out | grep Matrix | wc -l`;
-    #my $nn2=`ls $BND/*.out | wc -l`;
+    $current_job_file = "j10_".$sample_name."_PBN".".sh";
 
-    #print $nn1,"\n";
-    #print $nn2,"\n";
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
 
-    #if($nn1 != $nn2 || $nn2<200) 
-	#{
-	$current_job_file = "j9_".$sample_name."_BN_".$$.".sh";
-	open (BN, ">$job_files_dir/$current_job_file") or die $!;
-	print BN "#!/bin/bash\n";
-	print BN "#BSUB -n 1\n";
-    print BN "#BSUB -R \"span[hosts=1] rusage[mem=40000]\"","\n";
-    print BN "#BSUB -M 40000000\n";
-    print BN "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print BN "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print BN "#BSUB -J $current_job_file\[1-$file_number_of_Blast_N\]\n";
-	print BN "#BSUB -w \"$hold_job_file\"","\n";	
-	#################################
-	print BN "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
-	#print BN "#\$ -t 1-$file_number_of_Blast_N:1","\n"; #must be a decimal number, the value must be determined when this job file is generated. cannot be a variable
-	print BN "BlastNOUT=",'${BN_DIR}',"/",$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".blastn.out\n";#full path
-	print BN "QUERY=",'${BN_DIR}',"/".$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".fa\n\n";
-	print BN 'if [ -s $QUERY ]',"\n"; #modified by song. check if the file is empty
-	print BN "then\n";
-	#if the output file does not exist, run and check the completeness of the output file
-	print BN '	if [ ! -f $BlastNOUT ]',"\n";
-	print BN "	then\n";
-	print BN "		blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
-	print BN '		tail -5 ${BlastNOUT}|grep Matrix',"\n";
-	print BN '		CHECK1=$?',"\n";
-	print BN '		grep "no longer exists in database" ${BlastNOUT}',"\n"; # one possible blast error message ( see the end of this script).
-	print BN '		CHECK2=$?',"\n";
-	print BN '		while [ ${CHECK1} -eq 1 ] || [ ${CHECK2} -eq 0 ]',"\n";
-	print BN "		do\n";
-	print BN "			blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
-	print BN '			tail -5 ${BlastNOUT}|grep Matrix',"\n";
-	print BN '			CHECK1=$?',"\n";
-	print BN '			grep "no longer exists in database" ${BlastNOUT}',"\n";#see the end of this script
-	print BN '			CHECK2=$?',"\n";
-	print BN "		done\n";
-	#if the output file exists, check the completeness of the output file
-	print BN "	else\n";
-	print BN '		tail -5 ${BlastNOUT}|grep Matrix',"\n";
-	print BN '		CHECK1=$?',"\n";
-	print BN '		grep "no longer exists in database" ${BlastNOUT}',"\n";# one possible blast error (see the end of this script). 
-	print BN '		CHECK2=$?',"\n";
-	print BN '		while [ ${CHECK1} -eq 1 ] || [ ${CHECK2} -eq 0 ]',"\n";
-	print BN "		do\n";
-	print BN "			blastn -evalue  1e-9 -show_gis -num_threads 4 -query \${QUERY} -out \${BlastNOUT} -db $db_BN","\n";
-	print BN '			tail -5 ${BlastNOUT}|grep Matrix',"\n";
-	print BN '			CHECK1=$?',"\n";
-	print BN '			grep "no longer exists in database" ${BlastNOUT}',"\n";#see the end of this script
-	print BN '			CHECK2=$?',"\n";
-	print BN "		done\n";
-	print BN "	fi\n";
-	print BN "fi";
-	close BN;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -l h_vmem=10G -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
-    #}
+    open(my $PBN, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $PBN "#!/bin/bash\n";
+    print $PBN "set -euo pipefail\n\n";
+    print $PBN "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $PBN "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
+
+    print $PBN "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
+    print $PBN "BlastNOUT=".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.out\n";
+    print $PBN "BlastNIN=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".fa\n";
+    print $PBN "PARSED=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.parsed\n\n";
+
+    print $PBN 'if [ -s "$BlastNIN" ]',"\n";
+    print $PBN "then\n";
+    print $PBN '  CHECK=10',"\n";
+    print $PBN '  while [ ${CHECK} -eq 10 ]',"\n";
+    print $PBN "  do\n";
+    print $PBN "    ".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";
+    print $PBN "    ".$run_script_path."check_Blast_parsed_file.pl \"\${PARSED}\"\n";
+    print $PBN "    CHECK=\$?\n";
+    print $PBN "  done\n";
+    print $PBN "fi\n";
+    close($PBN);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\[1-$file_number_of_Blast_N\]\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" ".
+        "-M 10000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub parse_blast_N{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub blast_S {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	$current_job_file = "j10_".$sample_name."_PBN_".$$.".sh";
-	#my $BND=$sample_full_path."/".$sample_name.".".$BLAST_NT_DIR_SUFFIX;
-	#my $nn1=`tail $BND/*.out | grep Matrix | wc -l`;  
-    #my $nn2=`ls $BND/*.out | wc -l`; 
-	#print $nn1,"\n";
-	#print $nn2,"\n";
-	#if($nn1 != $nn2) { print "resubmited blastN for $sample_name","\n"; &submit_job_array_blast_N(1);  }
-	#else {
-    #exit(2); 	
-	open (PBN, ">$job_files_dir/$current_job_file") or die $!;
-	print PBN "#!/bin/bash\n";
-	print PBN "#BSUB -n 1\n";
-    print PBN "#BSUB -R \"rusage[mem=10000]\"","\n";
-    print PBN "#BSUB -M 10000000\n";
-    print PBN "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print PBN "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print PBN "#BSUB -J $current_job_file\[1-$file_number_of_Blast_N\]\n";
-	print PBN "#BSUB -w \"$hold_job_file\"","\n";	
-	#################################
-	print PBN "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
-	#print PBN "#\$ -t 1-$file_number_of_Blast_N:1","\n"; #must be a decimal number when the job file is created, cannot be a variable
-	print PBN "BlastNOUT=",$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".blastn.out\n";#name only, not full path
-	print PBN "BlastNIN=",'${BN_DIR}',"/",$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".fa\n";#full path
-	print PBN "PARSED=",'${BN_DIR}',"/".$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".blastn.parsed\n\n";
-	print PBN 'if [ -s $BlastNIN ]',"\n"; #song changed -f to -s; 
-	print PBN "then\n";
-	#if the parsed file does not exist, run parser and check the completeness of the parsed file
-	print PBN '	if [ ! -f $PARSED ]',"\n";
-	print PBN "	then\n";
-	print PBN "		".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "		".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
-	print PBN '		CHECK=$?',"\n";
-	#check if parsed file is completed, if not completed. run and check again
-	print PBN '		while [ ${CHECK} -eq 10 ]',"\n"; #10 is the error exit code of check_Blast_parsed_file.pl if it's not correctly completed.  
-	print PBN "		do\n"; #run parser again
-	print PBN "			".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "			".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
-	print PBN '			CHECK=$?',"\n";
-	print PBN "		done\n";
-	#if the parsed file exists, check the completeness of the parsed file
-	print PBN "	else\n";
-   #     print PBN "             ".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "		".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
-	print PBN '		CHECK=$?',"\n";
-	#check if parsed file is completed. If not correctly completed run and check again
-	print PBN '		while [ ${CHECK} -eq 10 ]',"\n";
-	print PBN "		do\n";  #run parser again
-	print PBN "			".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNOUT}\n";
-	print PBN "			".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
-	print PBN '			CHECK=$?',"\n";
-	print PBN "		done\n";
-	print PBN "	fi\n";
-	print PBN "fi";
-	close PBN;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
-}
+    $current_job_file = "j11_".$sample_name."_blastS".".sh";
 
-#####################################################################################
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
 
-sub blast_S{
+    open(my $PS, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $PS "#!/bin/bash\n";
+    print $PS "set -euo pipefail\n\n";
+    print $PS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+    print $PS "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
-        my ($step_by_step) = @_;
-        if ($step_by_step) {
-                $hold_job_file = "";
-        }else{
-                $hold_job_file = $current_job_file;
-        }
-        $current_job_file = "j11_".$sample_name."_blastS_".$$.".sh";
-        open (PS, ">$job_files_dir/$current_job_file") or die $!;
-        print PS "#!/bin/bash\n";
-        print PS "#BSUB -n 1\n";
-        print PS "#BSUB -R \"rusage[mem=10000]\"","\n";
-        print PS "#BSUB -M 10000000\n";
-        print PS "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-        print PS "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-        print PS "#BSUB -J $current_job_file\[1-$file_number_of_Blast_N\]\n";
-        print PS "#BSUB -w \"$hold_job_file\"","\n";
-        #################################
-        print PS "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
-        #print PBN "#\$ -t 1-$file_number_of_Blast_N:1","\n"; #must be a decimal number when the job file is created, cannot be a variable
-        print PS "BlastNparsed=",$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".blastn.parsed\n";#name only, not full path
-        print PS "BlastNIN=",'${BN_DIR}',"/",$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".fa\n";#full path
-        print PS "OUTPUT=",'${BN_DIR}',"/".$sample_name.".RefGfiltered.fa_file".'${LSB_JOBINDEX}',".blastn.summary\n\n";
-        print PS 'if [ -s $BlastNIN ]',"\n"; #song changed -f to -s; 
-        print PS "then\n";
-        #if the parsed file does not exist, run parser and check the completeness of the parsed file
-        print PS '     if [ ! -f $OUTPUT ]',"\n";
-        print PS "     then\n";
-        print PS "             ".$run_script_path."blast_summary.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNparsed}\n";
- 		print PS '             grep "Finished summary" ${OUTPUT}',"\n";
-        print PS '             CHECK=$?',"\n";
-        #check if parsed file is completed, if not completed. run and check again
-        print PS '             while [ ${CHECK} -eq 1 ]',"\n"; #10 is the error exit code of check_Blast_parsed_file.pl if it's not correctly completed.  
-        print PS "             do\n"; #run parser again
-        print PS "                     ".$run_script_path."blast_summary.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNparsed}\n";
-        print PS '             	       grep "Finished summary" ${OUTPUT}',"\n";
-        print PS '                     CHECK=$?',"\n";
-        print PS "             done\n";
-        #if the parsed file exists, check the completeness of the parsed file
-        print PS "     else\n";
-        #print PS "             ".$run_script_path."check_Blast_parsed_file.pl \${PARSED}\n";
- 		print PS '             grep "Finished summary" ${OUTPUT}',"\n";
-        print PS '             CHECK=$?',"\n";
-        #check if parsed file is completed. If not correctly completed run and check again
-        print PS '             while [ ${CHECK} -eq 1 ]',"\n";
-        print PS "             do\n";  #run parser again
-        print PS "                     ".$run_script_path."blast_summary.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \${BlastNparsed}\n";
-		print PS '                     grep "Finished summary" ${OUTPUT}',"\n";
-        print PS '                     CHECK=$?',"\n";
-        print PS "             done\n";
-        print PS "     fi\n";
-        print PS "fi";
-        close PS;
-        $bsub_com = "bsub < $job_files_dir/$current_job_file";
-        #$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-        system ($bsub_com);
+    print $PS "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
+    print $PS "BlastNparsed=".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.parsed\n";
+    print $PS "BlastNIN=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".fa\n";
+    print $PS "OUTPUT=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.summary\n\n";
 
+    print $PS 'if [ -s "$BlastNIN" ]',"\n";
+    print $PS "then\n";
+    print $PS '  CHECK=1',"\n";
+    print $PS '  while [ $CHECK -ne 0 ]',"\n";
+    print $PS "  do\n";
+    print $PS "    ".$run_script_path."blast_summary.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNparsed}\"\n";
+    print $PS '    grep -q "Finished summary" "${OUTPUT}"',"\n";
+    print $PS '    CHECK=$?',"\n";
+    print $PS "  done\n";
+    print $PS "fi\n";
+    close($PS);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\[1-$file_number_of_Blast_N\]\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" ".
+        "-M 10000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 
 #####################################################################################
 
-sub report_for_each_sample{
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+sub report_for_each_sample {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	$current_job_file = "j12_".$sample_name."_Rep_".$$.".sh";
-	open(REP, ">$job_files_dir/$current_job_file") or die $!;
-	print REP "#!/bin/bash\n";
-	print REP "#BSUB -n 1\n";
-    print REP "#BSUB -R \"rusage[mem=40000]\"","\n";
-    print REP "#BSUB -M 40000000\n";
-    print REP "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print REP "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print REP "#BSUB -J $current_job_file\n";
-	print REP "#BSUB -w \"$hold_job_file\"","\n";	
-	############################
-	print REP "INPUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";#RepeatMasker QC output
-	print REP "REPORT=".$sample_full_path."/".$sample_name.".gi.AssignmentReport\n";
-	print REP 'if [ -f $REPORT ] ',"\n"; # report file exist 
-	print REP "then\n";
-	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
-	print REP '	CHECK=$?',"\n";
-	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
-	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
-	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
-	print REP '		CHECK=$?',"\n";
-	print REP "	done\n";
-	print REP "else\n"; # report file does not exist
-	print REP "	".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
-	print REP '	grep "# Finished Assignment Report" ${REPORT}',"\n";  
-	print REP '	CHECK=$?',"\n";
-	print REP '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, report not finish
-	print REP "	do\n";
-	print REP "		".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \${INPUT} $refrence_genome_taxonomy \n";
-	print REP '		grep "# Finished Assignment Report" ${REPORT}',"\n";
-	print REP '		CHECK=$?',"\n";
-	print REP "	done\n";
-	print REP "fi\n";
-	close REP;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -P long -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    $current_job_file = "j12_".$sample_name."_Rep".".sh";
+
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
+
+    open(my $REP, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $REP "#!/bin/bash\n";
+    print $REP "set -euo pipefail\n\n";
+    print $REP "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    print $REP "INPUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";
+    print $REP "REPORT=".$sample_full_path."/".$sample_name.".gi.AssignmentReport\n\n";
+
+    print $REP 'CHECK=1',"\n";
+    print $REP 'while [ ${CHECK} -ne 0 ]',"\n";
+    print $REP "do\n";
+    print $REP "  ".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \"\${INPUT}\" $refrence_genome_taxonomy\n";
+    print $REP '  grep -q "# Finished Assignment Report" "${REPORT}"',"\n";
+    print $REP '  CHECK=$?',"\n";
+    print $REP "done\n";
+    close($REP);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>40000] rusage[mem=40000]\" ".
+        "-M 40000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
 
 #####################################################################################
 
-sub summary_for_each_sample{
+sub summary_for_each_sample {
+    my ($step_by_step) = @_;
+    if ($step_by_step) { $hold_job_file = ""; }
+    else { $hold_job_file = $current_job_file; }
 
-	my ($step_by_step) = @_;
-	if ($step_by_step) {
-		$hold_job_file = "";
-	}else{
-		$hold_job_file = $current_job_file;
-	}
+    $current_job_file = "j13_".$sample_name."_Sum".".sh";
 
-	$current_job_file = "j13_".$sample_name."_Sum_".$$.".sh";
+    my $lsf_out = $lsf_file_dir."/".$current_job_file.".out";
+    my $lsf_err = $lsf_file_dir."/".$current_job_file.".err";
+    `rm -f $lsf_out`; `rm -f $lsf_err`;
 
-	open(SUM, ">$job_files_dir/$current_job_file") or die $!;
-	print SUM "#!/bin/bash\n";
-	print SUM "#BSUB -n 1\n";
-    print SUM "#BSUB -R \"rusage[mem=40000]\"","\n";
-    print SUM "#BSUB -M 40000000\n";
-    print SUM "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print SUM "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print SUM "#BSUB -J $current_job_file\n";
-	print SUM "#BSUB -w \"$hold_job_file\"","\n";	
-	############################
-	print SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.AssignmentSummary\n";
-	print SUM "BAD_SEQ=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.badSeq\n\n"; #output of RepeatMasker
-	print SUM 'if [ -f $OUTPUT ] ',"\n"; # summary file exist 
-	print SUM "then\n";
-	print SUM '	grep "# Finished Assignment Summary" ${OUTPUT}',"\n";  
-	print SUM '	CHECK=$?',"\n";
-	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
-	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
-	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
-	print SUM '		CHECK=$?',"\n";
-	print SUM "	done\n";
-	print SUM "else\n"; # file does not exist
-	print SUM "	".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
-	print SUM '	grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
-	print SUM '	CHECK=$?',"\n";
-	print SUM '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
-	print SUM "	do\n";
-	print SUM "		".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \${BAD_SEQ}\n";
-	print SUM '		grep "# Finished Assignment Summary" ${OUTPUT}',"\n";
-	print SUM '		CHECK=$?',"\n";
-	print SUM "	done\n";
-	print SUM "fi\n";
-	close SUM;
-	$bsub_com = "bsub < $job_files_dir/$current_job_file";
-	#$bsub_com = "qsub -V -P long -N $working_name -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+    open(my $SUM, ">", "$job_files_dir/$current_job_file") or die $!;
+    print $SUM "#!/bin/bash\n";
+    print $SUM "set -euo pipefail\n\n";
+    print $SUM "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    print $SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.AssignmentSummary\n";
+    print $SUM "BAD_SEQ=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.badSeq\n\n";
+
+    print $SUM 'CHECK=1',"\n";
+    print $SUM 'while [ ${CHECK} -ne 0 ]',"\n";
+    print $SUM "do\n";
+    print $SUM "  ".$run_script_path."assignment_summary_gi.pl ".$sample_full_path." \"\${BAD_SEQ}\"\n";
+    print $SUM '  grep -q "# Finished Assignment Summary" "${OUTPUT}"',"\n";
+    print $SUM '  CHECK=$?',"\n";
+    print $SUM "done\n";
+    close($SUM);
+
+    my $sh_file = "$job_files_dir/$current_job_file";
+
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = "-w \"$hold_job_file\" ";
+    }
+
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active ".
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" ".
+        "bsub -g /$compute_username/$group_name -q $q_name ".
+        "-J \"$current_job_file\" $dep ".
+        "-n 1 ".
+        "-R \"span[hosts=1] select[mem>40000] rusage[mem=40000]\" ".
+        "-M 40000000 ".
+        "-a 'docker(scao/virusscan:0.0.2)' ".
+        "-o $lsf_out -e $lsf_err ".
+        "bash $sh_file\n";
+
+    print $bsub_com;
+    system($bsub_com);
 }
