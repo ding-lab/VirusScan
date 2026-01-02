@@ -592,13 +592,30 @@ sub submit_job_array_RM {
     print $RM "RMOUT=".'${RMIN}'.".masked\n";
     print $RM "FINAL_OUT=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${JOBIDX}'.".fa.masked\n\n";
 
-    print $RM 'if [ -s "$RMIN" ]',"\n";
-    print $RM "then\n";
-    print $RM '  if [ ! -s "$FINAL_OUT" ]',"\n";
-    print $RM "  then\n";
-    # Now RepeatMasker can be called without full path
-    print $RM '     RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
-    print $RM "  fi\n\n";
+    # print $RM 'if [ -s "$RMIN" ]',"\n";
+    # print $RM "then\n";
+    # print $RM '  if [ ! -s "$FINAL_OUT" ]',"\n";
+    # print $RM "  then\n";
+    # # Now RepeatMasker can be called without full path
+    # print $RM '     RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
+    # print $RM "  fi\n\n";
+
+	print $RM 'if [ -s "$RMIN" ]',"\n";
+	print $RM "then\n";
+	print $RM '  attempt=1',"\n";
+	print $RM '  max_attempts=100',"\n";
+	print $RM '  while [ $attempt -le $max_attempts ] && [ ! -s "$FINAL_OUT" ]',"\n";
+	print $RM "  do\n";
+	print $RM '    echo "Running RepeatMasker attempt $attempt on $RMIN" >&2',"\n";
+	print $RM '    RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
+	print $RM '    attempt=$((attempt+1))',"\n";
+	print $RM "  done\n\n";
+	print $RM '  if [ ! -s "$FINAL_OUT" ]',"\n";
+	print $RM "  then\n";
+	print $RM '    echo "ERROR: RepeatMasker failed after $max_attempts attempts; $FINAL_OUT missing" >&2',"\n";
+	print $RM "    exit 1\n";
+	print $RM "  fi\n";
+	print $RM "fi\n";
 
     # copy actual RepeatMasker masked output to your expected name
     print $RM '  if [ -s "$RMOUT" ]',"\n";
