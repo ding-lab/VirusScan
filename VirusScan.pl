@@ -449,6 +449,7 @@ sub bsub_bwa{
     open(BWA, ">$job_files_dir/$current_job_file") or die $!;
 
     print BWA "#!/bin/bash\n";
+	print BWA "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print BWA "BWA_IN=".$sample_full_path."/".$sample_name.".bam\n";
     print BWA "BWA_fq=".$sample_full_path."/".$sample_name.".fq\n";
     print BWA "BWA_sai=".$sample_full_path."/".$sample_name.".sai\n";
@@ -517,6 +518,7 @@ sub split_for_RepeatMasker {
 	
 	open(RMSPLIT, ">$job_files_dir/$current_job_file") or die $!;
 	print RMSPLIT "#!/bin/bash\n";
+	print RMSPLIT "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
    # print RMSPLIT "#BSUB -J $current_job_file\n";
 	print RMSPLIT "RMSPLIT_IN=".$sample_full_path."/".$sample_name.".fa\n";
 #	print RMSPLIT "#BSUB -w \"$hold_job_file\"","\n";	
@@ -562,14 +564,11 @@ sub split_for_RepeatMasker {
 	# system ($bsub_com);
 }
 
-#####################################################################################
 
 sub submit_job_array_RM {
 
-    # Job script name (as requested)
-    $current_job_file = "j3_".$sample_name."_RM_".$$.".sh";
+    $current_job_file = "j3_".$sample_name."_RM".".sh";
 
-    # Logs (use %I for array index)
     my $lsf_out = $lsf_file_dir."/".$current_job_file.".%I.out";
     my $lsf_err = $lsf_file_dir."/".$current_job_file.".%I.err";
 
@@ -581,19 +580,33 @@ sub submit_job_array_RM {
     print $RM "#!/bin/bash\n";
     print $RM "set -euo pipefail\n\n";
 
+    # Make conda env tools visible by name (bwa, RepeatMasker, python3, etc.)
+    print $RM "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
+
+    # robust array index
+    print $RM "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
+
+    # inputs/outputs
     print $RM "RM_dir=".$sample_full_path."/".$sample_name.".$REPEAT_MASKER_DIR_SUFFIX\n";
-    print $RM "RMIN=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa\n";
-    print $RM "RMOUT=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${LSB_JOBINDEX}'.".fa.masked\n\n";
+    print $RM "RMIN=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${JOBIDX}'.".fa\n";
+    print $RM "RMOUT=".'${RMIN}'.".masked\n";
+    print $RM "FINAL_OUT=".'${RM_dir}'."/".$sample_name.".fa.cdhit_out_file".'${JOBIDX}'.".fa.masked\n\n";
 
     print $RM 'if [ -s "$RMIN" ]',"\n";
     print $RM "then\n";
-    print $RM '  if [ ! -s "$RMOUT" ]',"\n";
+    print $RM '  if [ ! -s "$FINAL_OUT" ]',"\n";
     print $RM "  then\n";
-    print $RM '     /opt/conda/envs/virusscan/bin/RepeatMasker -pa 4 "$RMIN"',"\n";
+    # Now RepeatMasker can be called without full path
+    print $RM '     RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
     print $RM "  fi\n\n";
-    print $RM '  if [ ! -f "$RMOUT" ]',"\n";
+
+    # copy actual RepeatMasker masked output to your expected name
+    print $RM '  if [ -s "$RMOUT" ]',"\n";
     print $RM "  then\n";
-    print $RM '    cp "$RMIN" "$RMOUT"',"\n";
+    print $RM '    cp -f "$RMOUT" "$FINAL_OUT"',"\n";
+    print $RM "  else\n";
+    print $RM '    echo "WARNING: $RMOUT not produced; copying input to $FINAL_OUT" >&2',"\n";
+    print $RM '    cp -f "$RMIN" "$FINAL_OUT"',"\n";
     print $RM "  fi\n";
     print $RM "fi\n";
 
@@ -601,14 +614,17 @@ sub submit_job_array_RM {
 
     my $sh_file = "$job_files_dir/$current_job_file";
 
-    # Optional dependency
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
         $dep = "-w \"$hold_job_file\" ";
     }
 
-    # Submit as an array job using docker (step1/2 style)
+    # Mount the WHOLE famdb dir so both dfam39_full.0.h5 and dfam39_full.7.h5 are visible
+    my $famdb_host = "/storage1/fs1/dinglab/Active/Projects/scao/database/dfam39_famdb";
+    my $famdb_cont = "/opt/conda/envs/virusscan/share/RepeatMasker/Libraries/famdb";
+
     $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active /storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active $famdb_host:$famdb_cont:ro\" " .
         "bsub -g /$compute_username/$group_name -q $q_name " .
         "-J \"$current_job_file\[1-$file_number_of_RepeatMasker\]\" " .
         "$dep" .
@@ -1216,4 +1232,3 @@ sub summary_for_each_sample{
 	#$bsub_com = "qsub -V -P long -N $working_name -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
 	system ($bsub_com);
 }
-

@@ -11,4 +11,10 @@ docker build -f ./Dockerfile -t scao/virusscan:0.0.2 .
 docker run --rm -it scao/virusscan:0.0.2 bash
 
 docker push scao/virusscan:0.0.2
+
+cd /storage1/fs1/dinglab/Active/Projects/scao/database/dfam39_famdb
+
+wget -c https://www.dfam.org/releases/Dfam_3.9/families/FamDB/dfam39_full.0.h5.gz
+gunzip -f dfam39_full.0.h5.gz
+
 ~                                     
