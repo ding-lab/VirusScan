@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vim \
     bzip2 \
     xz-utils \
+    bioperl \
     && rm -rf /var/lib/apt/lists/*
 
 # install miniconda
