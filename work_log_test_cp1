@@ -12,3 +12,7 @@ perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/
 perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun --log /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun.log --q general  --users songcao --groupname SomaticWXS --step 6
 
 perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun --log /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun.log --q general  --users songcao --groupname SomaticWXS --step 7
+
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun --log /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun.log --q general  --users songcao --groupname SomaticWXS --step 8
+
+perl VirusScan.pl --rdir /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun --log /storage1/fs1/dinglab/Active/Projects/scao/viruscancer/testrun.log --q general  --users songcao --groupname SomaticWXS --step 9

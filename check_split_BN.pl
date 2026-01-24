@@ -9,7 +9,7 @@ die $usage unless scalar @ARGV == 1;
 my ( $dir ) = @ARGV;
 
 my $finished = &check_split_output($dir);
-#print $finished; 
+#print $finished;
 exit ($finished);
 
 ##############################################################

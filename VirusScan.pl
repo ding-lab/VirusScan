@@ -523,7 +523,7 @@ sub split_for_RepeatMasker {
     open(my $RMSPLIT, ">", "$job_files_dir/$current_job_file") or die $!;
 
     print $RMSPLIT "#!/bin/bash\n";
-    print $RMSPLIT "set -euo pipefail\n\n";
+    #print $RMSPLIT "set -euo pipefail\n\n";
     print $RMSPLIT "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
     # inputs/dirs
@@ -587,7 +587,7 @@ sub submit_job_array_RM {
     open(my $RM, ">", "$job_files_dir/$current_job_file") or die $!;
 
     print $RM "#!/bin/bash\n";
-    print $RM "set -euo pipefail\n\n";
+    #print $RM "set -euo pipefail\n\n";
 
     # Make conda env tools visible by name (bwa, RepeatMasker, python3, etc.)
     print $RM "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
@@ -687,7 +687,7 @@ sub seq_QC {
     open(my $QC, ">", "$job_files_dir/$current_job_file") or die $!;
 
     print $QC "#!/bin/bash\n";
-    print $QC "set -euo pipefail\n\n";
+   # print $QC "set -euo pipefail\n\n";
 
     print $QC "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
@@ -758,7 +758,7 @@ sub split_for_blast_RefG {
 
     open(my $RefGS, ">", "$job_files_dir/$current_job_file") or die $!;
     print $RefGS "#!/bin/bash\n";
-    print $RefGS "set -euo pipefail\n\n";
+    #print $RefGS "set -euo pipefail\n\n";
     print $RefGS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
     print $RefGS "RefG_DIR=".$sample_full_path."/".$sample_name.".$BLAST_RefG_DIR_SUFFIX\n";
@@ -822,7 +822,7 @@ sub submit_job_array_blast_RefG {
 
     open(my $RefG, ">", "$job_files_dir/$current_job_file") or die $!;
     print $RefG "#!/bin/bash\n";
-    print $RefG "set -euo pipefail\n\n";
+    #print $RefG "set -euo pipefail\n\n";
     print $RefG "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print $RefG "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
@@ -880,7 +880,7 @@ sub parse_blast_RefG {
 
     open(my $PRefG, ">", "$job_files_dir/$current_job_file") or die $!;
     print $PRefG "#!/bin/bash\n";
-    print $PRefG "set -euo pipefail\n\n";
+    #print $PRefG "set -euo pipefail\n\n";
     print $PRefG "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print $PRefG "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
@@ -939,7 +939,7 @@ sub pool_split_for_blast_N {
 
     open(my $BNS, ">", "$job_files_dir/$current_job_file") or die $!;
     print $BNS "#!/bin/bash\n";
-    print $BNS "set -euo pipefail\n\n";
+    #print $BNS "set -euo pipefail\n\n";
     print $BNS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
     print $BNS "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
@@ -953,6 +953,7 @@ sub pool_split_for_blast_N {
 
     print $BNS $run_script_path."check_split_BN.pl \${SAMPLE_DIR}\n";
     print $BNS "CHECK=\$?\n";
+    print $BNS "echo \"[BN_split] initial CHECK=\${CHECK}\" \n";   # <-- add this
     print $BNS "while [ \${CHECK} -eq 10 ]\n";
     print $BNS "do\n";
     print $BNS "  ".$run_script_path."split_fasta.pl -i \"\${RefGFiltered_fa}\" -o \"\${BN_DIR}\" -n $file_number_of_Blast_N -p ".$sample_name.".RefGfiltered.fa_file\n";
@@ -999,7 +1000,7 @@ sub submit_job_array_blast_N {
 
     open(my $BN, ">", "$job_files_dir/$current_job_file") or die $!;
     print $BN "#!/bin/bash\n";
-    print $BN "set -euo pipefail\n\n";
+   # print $BN "set -euo pipefail\n\n";
     print $BN "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print $BN "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
