@@ -13,7 +13,7 @@ my $green = "\e[32m";
 my $purple = "\e[35m";
 my $cyan = "\e[36m";
 my $normal = "\e[0m"; 
-my $version = "1.1";
+my $version = "1.2";
 #usage information
 (my $usage = <<OUT) =~ s/\t+//g;
 This script will run the virus discovery pipeline on LSF cluster.
