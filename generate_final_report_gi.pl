@@ -16,11 +16,11 @@ my ( $dir, $version ) = @ARGV;
 
 my @temp = split("/", $dir);
 my $run_name = pop @temp;
-my $outFile = $dir."/Analysis_Report_".$run_name;
+my $outFile = $dir."/Analysis_Report_".$run_name.".tsv";
 open (OUT, ">$outFile") or die "can not open file $outFile!\n";
 
 my ($wkday,$month,$day,$time,$year) = split(/\s+/, localtime);
-print OUT "PathHit V${version}; Processing date: $day-$month-$year\n";
+print OUT "Viruscan V${version}; Processing date: $day-$month-$year\n";
 
 my $c = "**************************************************************************\n";
 my $c2 = "#########################################################################\n\n";

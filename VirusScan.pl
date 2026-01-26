@@ -99,7 +99,7 @@ my $email = "scao\@wustl\.edu";
 #my $db_BX = "/gscuser/scao/gc3027/nr/nr";
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
-my $db_BN = "/storage1/fs1/songcao/Active/Database/nt";
+my $db_BN = "/storage1/fs1/songcao/Active/Database/nt/nt";
 my $db_BX = "/storage1/fs1/songcao/Active/Database/nr";
 my $bwa_ref = "/storage1/fs1/songcao/Active/Database/nt012414_RE_Split/nt012414_virus_abbr_cdhit98.fa";
 
@@ -306,51 +306,66 @@ if ($step_number < 14 || $step_number>=22) {
 # generate report for the run
 if (($step_number == 0) || ($step_number == 14) || ($step_number>=22)) {
 
-	print $yellow, "Submitting jobs for generating the report for the run ....",$normal, "\n";
-	$hold_job_file=$current_job_file; 
-	$current_job_file = "Run_report_".$$.".sh"; 
-	open(REPRUN, ">$job_files_dir/$current_job_file") or die $!;
-	print REPRUN "#!/bin/bash\n";
-    print REPRUN "#BSUB -n 1\n";
-    print REPRUN "#BSUB -R \"rusage[mem=40000]\"","\n";
-    print REPRUN "#BSUB -M 40000000\n";
-    #print REPRUN "#BSUB -q ding-lab\n";
-	print REPRUN "#BSUB -o $lsf_file_dir","/","$current_job_file.out\n";
-    print REPRUN "#BSUB -e $lsf_file_dir","/","$current_job_file.err\n";
-    print REPRUN "#BSUB -J $current_job_file\n";
-	print REPRUN "#BSUB -w \"$hold_job_file\"","\n";
-	
-	print REPRUN "BAD_SEQ=fa.cdhit_out.masked.badSeq\n"; #output of RepeatMasker
-	print REPRUN "BAD_SEQ=fa.cdhit_out.masked.badSeq\n"; #output of RepeatMasker
+	# -----------------------------
+# Submit job to generate report (Docker + bsub < script.sh so #BSUB lines still apply)
+# -----------------------------
 
-	print REPRUN "OUTPUT=".$run_dir."/Analysis_Report_gi_".$working_name."\n";
+print $yellow, "Submitting jobs for generating the report for the run ....", $normal, "\n";
 
-	print REPRUN 'if [ -f $OUTPUT ] ',"\n"; # file exist 
-	print REPRUN "then\n";
-	print REPRUN '	grep "# Finished" ${OUTPUT}',"\n";  
-	print REPRUN '	CHECK=$?',"\n";
-	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
-	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
-	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
-	print REPRUN '		CHECK=$?',"\n";
-	print REPRUN "	done\n";
-	print REPRUN "else\n"; # file does not exist
-	print REPRUN "	".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
-	print REPRUN '	grep "# Finished" ${OUTPUT}',"\n";
-	print REPRUN '	CHECK=$?',"\n";
-	print REPRUN '	while [ ${CHECK} -eq 1 ] ',"\n"; # grep unsuccessful, file not finish
-	print REPRUN "	do\n";
-	print REPRUN "		".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version,"\n";
-	print REPRUN '		grep "# Finished" ${OUTPUT}',"\n";
-	print REPRUN '		CHECK=$?',"\n";
-	print REPRUN "	done\n";
-	print REPRUN "fi\n";
-	close REPRUN;
-	close REPRUN;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-	#$bsub_com = "qsub -V -P long -hold_jid $working_name -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
+$hold_job_file    = $current_job_file;
+$current_job_file = "Run_report_".$$.".sh";
+
+my $sh_file  = "$job_files_dir/$current_job_file";
+my $lsf_out  = "$lsf_file_dir/$current_job_file.out";
+my $lsf_err  = "$lsf_file_dir/$current_job_file.err";
+
+open(REPRUN, ">$sh_file") or die $!;
+print REPRUN "#!/bin/bash\n";
+print REPRUN "#BSUB -n 1\n";
+print REPRUN "#BSUB -R \"rusage[mem=40000]\"\n";
+print REPRUN "#BSUB -M 40000000\n";
+# print REPRUN "#BSUB -q ding-lab\n";
+print REPRUN "#BSUB -o $lsf_out\n";
+print REPRUN "#BSUB -e $lsf_err\n";
+print REPRUN "#BSUB -J $current_job_file\n";
+print REPRUN "#BSUB -w \"$hold_job_file\"\n";
+
+# Only once (you had it duplicated)
+print REPRUN "BAD_SEQ=fa.cdhit_out.masked.badSeq\n"; # output of RepeatMasker
+print REPRUN "OUTPUT=".$run_dir."/Analysis_Report_gi_".$working_name."\n";
+
+print REPRUN "if [ -f \"\$OUTPUT\" ]\n";            # file exists?
+print REPRUN "then\n";
+print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\"\n";
+print REPRUN "  CHECK=\$?\n";
+print REPRUN "  while [ \${CHECK} -eq 1 ]\n";      # grep unsuccessful, file not finished
+print REPRUN "  do\n";
+print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\"\n";
+print REPRUN "    CHECK=\$?\n";
+print REPRUN "  done\n";
+print REPRUN "else\n";                              # file does not exist
+print REPRUN "  ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\"\n";
+print REPRUN "  CHECK=\$?\n";
+print REPRUN "  while [ \${CHECK} -eq 1 ]\n";
+print REPRUN "  do\n";
+print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\"\n";
+print REPRUN "    CHECK=\$?\n";
+print REPRUN "  done\n";
+print REPRUN "fi\n";
+
+close REPRUN;
+
+# Docker-enabled submission while keeping #BSUB directives in the script
+$bsub_com =
+  "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
+  "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
+  "bsub -a 'docker(scao/virusscan:0.0.2)' < $sh_file\n";
+
+print $bsub_com;
+system($bsub_com);
 
 }
 
@@ -1061,7 +1076,7 @@ sub parse_blast_N {
 
     open(my $PBN, ">", "$job_files_dir/$current_job_file") or die $!;
     print $PBN "#!/bin/bash\n";
-    print $PBN "set -euo pipefail\n\n";
+    #print $PBN "set -euo pipefail\n\n";
     print $PBN "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print $PBN "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
@@ -1075,7 +1090,7 @@ sub parse_blast_N {
     print $PBN '  CHECK=10',"\n";
     print $PBN '  while [ ${CHECK} -eq 10 ]',"\n";
     print $PBN "  do\n";
-    print $PBN "    ".$run_script_path."BLASTn_NT_parser.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";
+    print $PBN "    ".$run_script_path."BLASTn_NT_parser.v2.pl ".$log_dir." ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";
     print $PBN "    ".$run_script_path."check_Blast_parsed_file.pl \"\${PARSED}\"\n";
     print $PBN "    CHECK=\$?\n";
     print $PBN "  done\n";
@@ -1120,7 +1135,7 @@ sub blast_S {
 
     open(my $PS, ">", "$job_files_dir/$current_job_file") or die $!;
     print $PS "#!/bin/bash\n";
-    print $PS "set -euo pipefail\n\n";
+    #print $PS "set -euo pipefail\n\n";
     print $PS "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
     print $PS "JOBIDX=\${LSB_JOBINDEX:-1}\n\n";
 
@@ -1134,7 +1149,7 @@ sub blast_S {
     print $PS '  CHECK=1',"\n";
     print $PS '  while [ $CHECK -ne 0 ]',"\n";
     print $PS "  do\n";
-    print $PS "    ".$run_script_path."blast_summary.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNparsed}\"\n";
+    print $PS "    ".$run_script_path."blast_summary.v2.pl ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNparsed}\"\n";
     print $PS '    grep -q "Finished summary" "${OUTPUT}"',"\n";
     print $PS '    CHECK=$?',"\n";
     print $PS "  done\n";
@@ -1180,7 +1195,7 @@ sub report_for_each_sample {
 
     open(my $REP, ">", "$job_files_dir/$current_job_file") or die $!;
     print $REP "#!/bin/bash\n";
-    print $REP "set -euo pipefail\n\n";
+    #print $REP "set -euo pipefail\n\n";
     print $REP "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
     print $REP "INPUT=".$sample_full_path."/".$sample_name.".fa.cdhit_out.masked.goodSeq\n";
@@ -1189,7 +1204,7 @@ sub report_for_each_sample {
     print $REP 'CHECK=1',"\n";
     print $REP 'while [ ${CHECK} -ne 0 ]',"\n";
     print $REP "do\n";
-    print $REP "  ".$run_script_path."assignment_report_virus_gi.pl ".$sample_full_path." \"\${INPUT}\" $refrence_genome_taxonomy\n";
+    print $REP "  ".$run_script_path."assignment_report_virus_gi.v2.pl ".$sample_full_path." \"\${INPUT}\" $refrence_genome_taxonomy\n";
     print $REP '  grep -q "# Finished Assignment Report" "${REPORT}"',"\n";
     print $REP '  CHECK=$?',"\n";
     print $REP "done\n";
@@ -1233,7 +1248,7 @@ sub summary_for_each_sample {
 
     open(my $SUM, ">", "$job_files_dir/$current_job_file") or die $!;
     print $SUM "#!/bin/bash\n";
-    print $SUM "set -euo pipefail\n\n";
+    #print $SUM "set -euo pipefail\n\n";
     print $SUM "export PATH=/opt/conda/envs/virusscan/bin:\$PATH\n\n";
 
     print $SUM "OUTPUT=".$sample_full_path."/".$sample_name.".gi.AssignmentSummary\n";
