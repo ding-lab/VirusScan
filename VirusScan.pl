@@ -180,6 +180,29 @@ my $BLASTX_NR_DIR_SUFFIX = "BNFiltered_BLASTX_NR";
 # get sample list in the run, name should not contain "."
 opendir(DH, $run_dir) or die "Cannot open dir $run_dir: $!\n";
 my @sample_dir_list = readdir DH;
+# --- NEW: chaining helpers (per-sample LSF dependencies) ---
+my $CHAIN_MODE = ($step_number == 0 || $step_number >= 22) ? 1 : 0;  # chain in "run-all" modes
+my $last_job_id = undef;  # reset per sample before submitting the first job
+
+sub submit_with_dep_cmd {
+    my ($cmd) = @_;
+    if ($CHAIN_MODE && defined $last_job_id) {
+        my $dep = qq{ -w "done($last_job_id)"};
+        if ($cmd =~ / -o /) {
+            $cmd =~ s/ -o /$dep -o /;
+        } else {
+            $cmd .= $dep;
+        }
+    }
+    print $cmd, "\n";
+    my $out = `$cmd`;
+    my ($jobid) = ($out =~ /Job\s+<(\d+)>/);
+    if ($CHAIN_MODE && defined $jobid) {
+        $last_job_id = $jobid;
+    }
+    return $jobid;
+}
+
 close DH;
 
 # check to make sure the input directory has correct structure
@@ -194,6 +217,8 @@ if ($step_number < 14 || $step_number>=22) {
 			$sample_full_path = $run_dir."/".$sample_name;
 			if (-d $sample_full_path) { # is a full path directory containing a sample
 				print $yellow, "\nSubmitting jobs for the sample ",$sample_name, "...",$normal, "\n";
+                # NEW: reset chain per sample
+                $last_job_id = undef;
 				$current_job_file="";
 				if ($step_number == 0 || $step_number>=22) {#run the whole pipeline
 					######################################################################
@@ -365,7 +390,7 @@ $bsub_com =
   "bsub -a 'docker(scao/virusscan:0.0.2)' < $sh_file\n";
 
 print $bsub_com;
-system($bsub_com);
+submit_with_dep_cmd($bsub_com);
 
 }
 
@@ -517,7 +542,7 @@ sub bsub_bwa{
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 
 }
 
@@ -585,7 +610,7 @@ sub split_for_RepeatMasker {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 
@@ -677,7 +702,7 @@ sub submit_job_array_RM {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -755,7 +780,7 @@ sub seq_QC {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 
 }
 
@@ -819,7 +844,7 @@ sub split_for_blast_RefG {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -877,7 +902,7 @@ sub submit_job_array_blast_RefG {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -936,7 +961,7 @@ sub parse_blast_RefG {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -997,7 +1022,7 @@ sub pool_split_for_blast_N {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -1058,7 +1083,7 @@ sub submit_job_array_blast_N {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -1117,7 +1142,7 @@ sub parse_blast_N {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -1176,7 +1201,7 @@ sub blast_S {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 
@@ -1230,7 +1255,7 @@ sub report_for_each_sample {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
 
 #####################################################################################
@@ -1283,5 +1308,5 @@ sub summary_for_each_sample {
         "bash $sh_file\n";
 
     print $bsub_com;
-    system($bsub_com);
+    submit_with_dep_cmd($bsub_com);
 }
