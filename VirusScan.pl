@@ -213,7 +213,8 @@ if ($step_number < 14 || $step_number>=22) {
 	#begin to process each sample
 	for (my $i=0;$i<@sample_dir_list;$i++) {#use the for loop instead. the foreach loop has some problem to pass the global variable $sample_name to the sub functions
 		$sample_name = $sample_dir_list[$i];
-		if (!($sample_name =~ /\./)) {
+        print "Processing sample: ", $sample_name, "\n";
+    	if (!($sample_name =~ /\./)) {
 			$sample_full_path = $run_dir."/".$sample_name;
 			if (-d $sample_full_path) { # is a full path directory containing a sample
 				print $yellow, "\nSubmitting jobs for the sample ",$sample_name, "...",$normal, "\n";
@@ -394,25 +395,7 @@ submit_with_dep_cmd($bsub_com);
 
 }
 
-#######################################################################
-# send email to notify the finish of the analysis
-if (($step_number == 0) || ($step_number == 15) || ($step_number>=22)) {
-	print $yellow, "Submitting the job for sending an email when the run finishes ",$sample_name, "...",$normal, "\n";
-	$hold_job_file = $current_job_file;
-	$current_job_file = "Email_run_".$$.".sh";
-	open(EMAIL, ">$job_files_dir/$current_job_file") or die $!;
-	print EMAIL "#!/bin/bash\n";
-    print EMAIL "#BSUB -n 1\n";
-    print EMAIL "#BSUB -o $lsf_file_dir","\n";
-    print EMAIL "#BSUB -e $lsf_file_dir","\n";
-    print EMAIL "#BSUB -J $current_job_file\n";
-	print EMAIL "#BSUB -w \"$hold_job_file\"","\n";	
-	print EMAIL $run_script_path."send_email.pl ".$run_dir." ".$email."\n";
-	close EMAIL;
-    $bsub_com = "bsub < $job_files_dir/$current_job_file\n";
-	#$bsub_com = "qsub -V -hold_jid $hold_job_file -e $lsf_file_dir -o $lsf_file_dir $job_files_dir/$current_job_file\n";
-	system ($bsub_com);
-}
+
 #######################################################################
 if ($step_number == 0) {
 	print $green, "All jobs are submitted! You will get email notification when this run is completed.\n",$normal;
@@ -464,7 +447,7 @@ sub bsub_bwa{
 
     #my $cdhitReport = $sample_full_path."/".$sample_name.".fa.cdhitReport";
 
-    $current_job_file = "j1_bwa_".$sample_name.".".$$.".sh";
+    $current_job_file = "j1_bwa_".$sample_name.".sh";
 
     my $IN_bam = $sample_full_path."/".$sample_name.".bam";
 
@@ -482,8 +465,8 @@ sub bsub_bwa{
 
     my $lsf_out=$lsf_file_dir."/".$current_job_file.".out";
     my $lsf_err=$lsf_file_dir."/".$current_job_file.".err";
-    rm $lsf_out;
-    rm $lsf_err;
+    `rm $lsf_out;`;
+    `rm $lsf_err;`;
 
     open(my $BWA, ">$job_files_dir/$current_job_file") or die $!;
 
