@@ -330,71 +330,77 @@ if ($step_number < 14 || $step_number>=22) {
 
 ##########################################################################################
 # generate report for the run
-if (($step_number == 0) || ($step_number == 14) || ($step_number>=22)) {
+if (($step_number == 0) || ($step_number == 14) || ($step_number >= 22)) {
 
-	# -----------------------------
-# Submit job to generate report (Docker + bsub < script.sh so #BSUB lines still apply)
-# -----------------------------
 
-print $yellow, "Submitting jobs for generating the report for the run ....", $normal, "\n";
+    print $yellow, "Submitting jobs for generating the report for the run ....", $normal, "\n";
 
-$hold_job_file    = $current_job_file;
-$current_job_file = "Run_report_".$$.".sh";
+    $hold_job_file    = $current_job_file;
+    $current_job_file = "Run_report_".$$.".sh";
 
-my $sh_file  = "$job_files_dir/$current_job_file";
-my $lsf_out  = "$lsf_file_dir/$current_job_file.out";
-my $lsf_err  = "$lsf_file_dir/$current_job_file.err";
+    my $sh_file  = "$job_files_dir/$current_job_file";
+    my $lsf_out  = "$lsf_file_dir/$current_job_file.out";
+    my $lsf_err  = "$lsf_file_dir/$current_job_file.err";
 
-open(REPRUN, ">$sh_file") or die $!;
-print REPRUN "#!/bin/bash\n";
-print REPRUN "#BSUB -n 1\n";
-print REPRUN "#BSUB -R \"rusage[mem=40000]\"\n";
-print REPRUN "#BSUB -M 40000000\n";
-# print REPRUN "#BSUB -q ding-lab\n";
-print REPRUN "#BSUB -o $lsf_out\n";
-print REPRUN "#BSUB -e $lsf_err\n";
-print REPRUN "#BSUB -J $current_job_file\n";
-print REPRUN "#BSUB -w \"$hold_job_file\"\n";
+    # -----------------------------
+    # Write the report script (plain bash; no #BSUB needed since we use bsub ... bash script)
+    # -----------------------------
+    open(REPRUN, ">$sh_file") or die $!;
+    print REPRUN "#!/bin/bash\n";
+    #print REPRUN "set -euo pipefail\n";
 
-# Only once (you had it duplicated)
-print REPRUN "BAD_SEQ=fa.cdhit_out.masked.badSeq\n"; # output of RepeatMasker
-print REPRUN "OUTPUT=".$run_dir."/Analysis_Report_gi_".$working_name."\n";
+    print REPRUN "BAD_SEQ=fa.cdhit_out.masked.badSeq\n"; # output of RepeatMasker
+    print REPRUN "OUTPUT=".$run_dir."/Analysis_Report_gi_".$working_name."\n";
 
-print REPRUN "if [ -f \"\$OUTPUT\" ]\n";            # file exists?
-print REPRUN "then\n";
-print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\"\n";
-print REPRUN "  CHECK=\$?\n";
-print REPRUN "  while [ \${CHECK} -eq 1 ]\n";      # grep unsuccessful, file not finished
-print REPRUN "  do\n";
-print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
-print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\"\n";
-print REPRUN "    CHECK=\$?\n";
-print REPRUN "  done\n";
-print REPRUN "else\n";                              # file does not exist
-print REPRUN "  ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
-print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\"\n";
-print REPRUN "  CHECK=\$?\n";
-print REPRUN "  while [ \${CHECK} -eq 1 ]\n";
-print REPRUN "  do\n";
-print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
-print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\"\n";
-print REPRUN "    CHECK=\$?\n";
-print REPRUN "  done\n";
-print REPRUN "fi\n";
+    print REPRUN "if [ -f \"\$OUTPUT\" ]\n";
+    print REPRUN "then\n";
+    print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\" || true\n";
+    print REPRUN "  CHECK=\$?\n";
+    print REPRUN "  while [ \${CHECK} -eq 1 ]\n";
+    print REPRUN "  do\n";
+    print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+    print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\" || true\n";
+    print REPRUN "    CHECK=\$?\n";
+    print REPRUN "  done\n";
+    print REPRUN "else\n";
+    print REPRUN "  ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+    print REPRUN "  grep \"# Finished\" \"\${OUTPUT}\" || true\n";
+    print REPRUN "  CHECK=\$?\n";
+    print REPRUN "  while [ \${CHECK} -eq 1 ]\n";
+    print REPRUN "  do\n";
+    print REPRUN "    ".$run_script_path."generate_final_report_gi.pl ".$run_dir." ".$version."\n";
+    print REPRUN "    grep \"# Finished\" \"\${OUTPUT}\" || true\n";
+    print REPRUN "    CHECK=\$?\n";
+    print REPRUN "  done\n";
+    print REPRUN "fi\n";
 
-close REPRUN;
+    close REPRUN;
 
-# Docker-enabled submission while keeping #BSUB directives in the script
-$bsub_com =
-  "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
-  "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
-  "bsub -a 'docker(scao/virusscan:0.0.2)' < $sh_file\n";
+    #  my $sh_file = $job_files_dir."/".$current_job_file;
 
-print $bsub_com;
-submit_with_dep_cmd($bsub_com);
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = qq{-w "done($hold_job_file)" };
+    }
 
-}
+    $bsub_com =
+        "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
+        "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
+        "bsub -g /$compute_username/$group_name -q $q_name " .
+        "-J \"$current_job_file\" " .
+        "$dep" .
+        "-n 1 " .
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" " .
+        "-M 10000000 " .
+        "-a 'docker(scao/virusscan:0.0.2)' " .
+        "-o $lsf_out -e $lsf_err " .
+        "bash $sh_file\n";
 
+    print $bsub_com;
+    submit_with_dep_cmd($bsub_com);
+
+
+    }
 
 #######################################################################
 if ($step_number == 0) {
@@ -534,6 +540,13 @@ sub bsub_bwa{
 
 sub split_for_RepeatMasker {
     # split file for RepeatMasker
+    my ($step_by_step) = @_;
+    if ($step_by_step) {
+        $hold_job_file = "";
+    } else {
+        $hold_job_file = $current_job_file;
+    }
+
 
     $current_job_file = "j2_".$sample_name."_RM_split".".sh";
 
@@ -579,25 +592,39 @@ sub split_for_RepeatMasker {
 
     my $sh_file = $job_files_dir."/".$current_job_file;
 
-    # Submit with docker and mounts (following seq_QC style)
+    my $dep = "";
+    if (defined $hold_job_file && $hold_job_file ne "") {
+        $dep = qq{-w "done($hold_job_file)" };
+    }
+
     $bsub_com =
         "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
         "/storage1/fs1/songcao/Active:/storage1/fs1/songcao/Active\" " .
         "bsub -g /$compute_username/$group_name -q $q_name " .
         "-J \"$current_job_file\" " .
+        "$dep" .
         "-n 1 " .
-        "-R \"span[hosts=1] select[mem>30000] rusage[mem=30000]\" " .
-        "-M 30000000 " .
+        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" " .
+        "-M 10000000 " .
         "-a 'docker(scao/virusscan:0.0.2)' " .
         "-o $lsf_out -e $lsf_err " .
         "bash $sh_file\n";
 
     print $bsub_com;
     submit_with_dep_cmd($bsub_com);
+
+
 }
 
 
 sub submit_job_array_RM {
+    my ($step_by_step) = @_;
+    if ($step_by_step) {
+        $hold_job_file = "";
+    } else {
+        $hold_job_file = $current_job_file;
+    }
+
 
     $current_job_file = "j3_".$sample_name."_RM".".sh";
 
@@ -632,31 +659,25 @@ sub submit_job_array_RM {
     # print $RM '     RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
     # print $RM "  fi\n\n";
 
-	print $RM 'if [ -s "$RMIN" ]',"\n";
-	print $RM "then\n";
-	print $RM '  attempt=1',"\n";
-	print $RM '  max_attempts=100',"\n";
-	print $RM '  while [ $attempt -le $max_attempts ] && [ ! -s "$FINAL_OUT" ]',"\n";
-	print $RM "  do\n";
-	print $RM '    echo "Running RepeatMasker attempt $attempt on $RMIN" >&2',"\n";
-	print $RM '    RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
-	print $RM '    attempt=$((attempt+1))',"\n";
-	print $RM "  done\n\n";
-	print $RM '  if [ ! -s "$FINAL_OUT" ]',"\n";
-	print $RM "  then\n";
-	print $RM '    echo "ERROR: RepeatMasker failed after $max_attempts attempts; $FINAL_OUT missing" >&2',"\n";
-	print $RM "    exit 1\n";
-	print $RM "  fi\n";
-	print $RM "fi\n";
+    # Strict mode: RepeatMasker must produce RMOUT; otherwise exit 1
+    print $RM 'if [ -s "$RMIN" ]',"\n";
+    print $RM "then\n";
+    print $RM '  attempt=1',"\n";
+    print $RM '  max_attempts=100',"\n";
+    print $RM '  while [ $attempt -le $max_attempts ] && [ ! -s "$RMOUT" ]',"\n";
+    print $RM "  do\n";
+    print $RM '    echo "Running RepeatMasker attempt $attempt on $RMIN" >&2',"\n";
+    print $RM '    RepeatMasker -pa 4 -species "homo sapiens" "$RMIN"',"\n";
+    print $RM '    attempt=$((attempt+1))',"\n";
+    print $RM "  done\n\n";
 
-    # copy actual RepeatMasker masked output to your expected name
-    print $RM '  if [ -s "$RMOUT" ]',"\n";
+    print $RM '  if [ ! -s "$RMOUT" ]',"\n";
     print $RM "  then\n";
-    print $RM '    cp -f "$RMOUT" "$FINAL_OUT"',"\n";
-    print $RM "  else\n";
-    print $RM '    echo "WARNING: $RMOUT not produced; copying input to $FINAL_OUT" >&2',"\n";
-    print $RM '    cp -f "$RMIN" "$FINAL_OUT"',"\n";
-    print $RM "  fi\n";
+    print $RM '    echo "ERROR: RepeatMasker failed after $max_attempts attempts; $RMOUT missing" >&2',"\n";
+    print $RM "    exit 1\n";
+    print $RM "  fi\n\n";
+
+    #print $RM '  cp -f "$RMOUT" "$FINAL_OUT"',"\n";
     print $RM "fi\n";
 
     close($RM);
@@ -665,7 +686,7 @@ sub submit_job_array_RM {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     # Mount the WHOLE famdb dir so both dfam39_full.0.h5 and dfam39_full.7.h5 are visible
@@ -678,8 +699,8 @@ sub submit_job_array_RM {
         "-J \"$current_job_file\[1-$file_number_of_RepeatMasker\]\" " .
         "$dep" .
         "-n 1 " .
-        "-R \"span[hosts=1] select[mem>10000] rusage[mem=10000]\" " .
-        "-M 10000000 " .
+        "-R \"span[hosts=1] select[mem>100000] rusage[mem=100000]\" " .
+        "-M 100000000 " .
         "-a 'docker(scao/virusscan:0.0.2)' " .
         "-o $lsf_out -e $lsf_err " .
         "bash $sh_file\n";
@@ -746,7 +767,7 @@ sub seq_QC {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -811,7 +832,7 @@ sub split_for_blast_RefG {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -869,7 +890,7 @@ sub submit_job_array_blast_RefG {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -928,7 +949,7 @@ sub parse_blast_RefG {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -989,7 +1010,7 @@ sub pool_split_for_blast_N {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -1050,7 +1071,7 @@ sub submit_job_array_blast_N {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -1109,7 +1130,7 @@ sub parse_blast_N {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -1168,7 +1189,7 @@ sub blast_S {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -1222,7 +1243,7 @@ sub report_for_each_sample {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
@@ -1275,7 +1296,7 @@ sub summary_for_each_sample {
 
     my $dep = "";
     if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = "-w \"$hold_job_file\" ";
+        $dep = qq{-w "done($hold_job_file)" };
     }
 
     $bsub_com =
