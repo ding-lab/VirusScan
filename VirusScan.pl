@@ -125,7 +125,7 @@ close IN_TF;
 #my $bwa_ref = "/gscuser/scao/gc3027/fasta/virus/virusdb_082414.fa";
 
 ## virus reference ##
-my $bwa_ref="./source/pathogenpdx.031823.fa";
+my $bwa_ref="./source/virusref.fa";
  
 my $HOME = $ENV{HOME};
 my $working_name= (split(/\//,$run_dir))[-1];
