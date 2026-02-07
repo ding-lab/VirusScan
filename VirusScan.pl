@@ -117,7 +117,7 @@ my $reference_genome = "";
 
 $refrence_genome_taxonomy = "Homo";
 
-$reference_genome = "/storage1/fs1/songcao/Active/Database/hg38_database/GRCh38.d1.vd1/GRCh38.d1.vd1.fa";
+$reference_genome = "/storage1/fs1/songcao/Active/Database/hg38_database/humancdna/gencode44/full/gencode.v44.transcripts.simplified.fa";
 
 #####################################################################################
 # everything else below should be automated
@@ -1119,7 +1119,7 @@ sub parse_blast_N {
     print $PBN '  CHECK=10',"\n";
     print $PBN '  while [ ${CHECK} -eq 10 ]',"\n";
     print $PBN "  do\n";
-    print $PBN "    ".$run_script_path."BLASTn_NT_parser.v2.pl ".$log_dir." ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";
+    print $PBN "    ".$run_script_path."BLASTn_NT_parser.v3.pl ".$log_dir." ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";
     print $PBN "    ".$run_script_path."check_Blast_parsed_file.pl \"\${PARSED}\"\n";
     print $PBN "    CHECK=\$?\n";
     print $PBN "  done\n";
