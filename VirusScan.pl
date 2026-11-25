@@ -26,6 +26,10 @@ $yellow		Usage: perl $0 --sre --rdir --log --q --groupname --users --step
 
 <step_number> run this pipeline step by step. (running the whole pipeline if step number is 0)
 
+<sre> re-run status for step 10, Parse BlastN result (default 0)
+0: skip files that already have a complete parsed result
+1: remove existing parsed results and parse again
+
 $green		[1]  Run bwa
 $red		[2, or <=22]  Split files for RepeatMasker
 			[3 or <=23]  Submit RepeatMasker job array
@@ -77,6 +81,12 @@ if ($help || $run_dir eq "" || $log_dir eq "" || $group_name eq "" || $compute_u
 	print $usage;
     exit;
    }
+
+if ($status_rerun != 0 && $status_rerun != 1) {
+	print "wrong option: --sre must be 0 or 1\n";
+	print $usage;
+	exit;
+}
 
 # unless ($step_number >=0)&&(($step_number <= 17) || ($step_number >= 22));
 
@@ -183,6 +193,8 @@ my @sample_dir_list = readdir DH;
 # --- NEW: chaining helpers (per-sample LSF dependencies) ---
 my $CHAIN_MODE = ($step_number == 0 || $step_number >= 22) ? 1 : 0;  # chain in "run-all" modes
 my $last_job_id = undef;  # reset per sample before submitting the first job
+my @final_job_ids = ();   # last job (step 13) of every sample; the run report waits for all of them
+my %submit_failed = ();   # samples with a job that could not be submitted
 
 sub submit_with_dep_cmd {
     my ($cmd) = @_;
@@ -199,6 +211,9 @@ sub submit_with_dep_cmd {
     my ($jobid) = ($out =~ /Job\s+<(\d+)>/);
     if ($CHAIN_MODE && defined $jobid) {
         $last_job_id = $jobid;
+    }
+    if ($CHAIN_MODE && !defined $jobid) {
+        $submit_failed{$sample_name} = 1;
     }
     return $jobid;
 }
@@ -291,7 +306,8 @@ if ($step_number < 14 || $step_number>=22) {
 
 					#Assignment summary for each sample
 					if($step_number<=33) {
-					&summary_for_each_sample();}
+					&summary_for_each_sample();
+					push(@final_job_ids, $last_job_id) if (defined $last_job_id);}
 				
 				######################################################################
 				#run the pipeline step by step
@@ -332,6 +348,13 @@ if ($step_number < 14 || $step_number>=22) {
 # generate report for the run
 if (($step_number == 0) || ($step_number == 14) || ($step_number >= 22)) {
 
+
+    # do not make a report that would be missing (or have old results for) some samples
+    if (%submit_failed) {
+        print $red, "Report job is NOT submitted. Job submission failed for: ", join(", ", sort keys %submit_failed), $normal, "\n";
+        print $red, "Fix these samples, then run --step 14 when all samples are finished.", $normal, "\n";
+        exit 1;
+    }
 
     print $yellow, "Submitting jobs for generating the report for the run ....", $normal, "\n";
 
@@ -378,10 +401,12 @@ if (($step_number == 0) || ($step_number == 14) || ($step_number >= 22)) {
 
     #  my $sh_file = $job_files_dir."/".$current_job_file;
 
+    # wait for the last job (step 13) of every sample, not only the last sample
     my $dep = "";
-    if (defined $hold_job_file && $hold_job_file ne "") {
-        $dep = qq{-w "done($hold_job_file)" };
+    if (@final_job_ids) {
+        $dep = '-w "' . join(" && ", map { "done($_)" } @final_job_ids) . '" ';
     }
+    $last_job_id = undef;  # the full dependency is in $dep; do not add a second -w
 
     $bsub_com =
         "LSF_DOCKER_VOLUMES=\"/storage1/fs1/dinglab/Active:/storage1/fs1/dinglab/Active " .
@@ -1112,11 +1137,28 @@ sub parse_blast_N {
     print $PBN "BN_DIR=".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX\n";
     print $PBN "BlastNOUT=".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.out\n";
     print $PBN "BlastNIN=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".fa\n";
-    print $PBN "PARSED=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.parsed\n\n";
+    print $PBN "PARSED=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".blastn.parsed\n";
+    print $PBN "BNFILTERED=".'${BN_DIR}'."/".$sample_name.".RefGfiltered.fa_file".'${JOBIDX}'.".BNfiltered.fa\n";
+    print $PBN "SRE=".$status_rerun."\n\n";
 
     print $PBN 'if [ -s "$BlastNIN" ]',"\n";
     print $PBN "then\n";
     print $PBN '  CHECK=10',"\n";
+    print $PBN '  if [ ${SRE} -eq 1 ]',"\n";
+    print $PBN "  then\n";
+    print $PBN '    rm -f "${PARSED}" "${BNFILTERED}"',"\n";
+    print $PBN '  elif [ -s "${PARSED}" ] && [ -f "${BNFILTERED}" ]',"\n";
+    print $PBN "  then\n";
+    print $PBN "    ".$run_script_path."check_Blast_parsed_file.pl \"\${PARSED}\"\n";
+    print $PBN '    CHECK=$?',"\n";
+    # 1 = complete; anything else means parse it
+    print $PBN '    if [ ${CHECK} -eq 1 ]',"\n";
+    print $PBN "    then\n";
+    print $PBN '      echo "${PARSED} is already complete, skipping (use --sre 1 to re-run)"',"\n";
+    print $PBN "    else\n";
+    print $PBN "      CHECK=10\n";
+    print $PBN "    fi\n";
+    print $PBN "  fi\n";
     print $PBN '  while [ ${CHECK} -eq 10 ]',"\n";
     print $PBN "  do\n";
     print $PBN "    ".$run_script_path."BLASTn_NT_parser.v3.pl ".$log_dir." ".$sample_full_path."/".$sample_name.".$BLAST_NT_DIR_SUFFIX \"\${BlastNOUT}\"\n";

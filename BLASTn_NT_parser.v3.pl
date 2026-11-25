@@ -88,6 +88,7 @@ while (my $result = $report->next_result) {
     $total_records++;
 
     my %assignment;
+    my $unresolved;   # best hit(s) whose taxid could not be looked up
     my $keep_for_tblastx = 1;
 
     # only take the best hits
@@ -135,14 +136,21 @@ while (my $result = $report->next_result) {
                         }
                     }
                 } else {
-                    my $desc = $hit->description . "\t" . $hit->name . "\t" . $hit->significance;
-                    $assignment{"other"} = $desc;
+                    # No taxid found: this is missing information, not evidence of
+                    # another species, so it must not turn Viruses into Ambiguous.
+                    $unresolved = $hit->description . "\t" . $hit->name . "\t" . $hit->significance
+                        unless defined $unresolved;
                 }
 
             } else {
                 last;
             }
         }
+    }
+
+    # report a missing taxid as "other" only if no tied hit could be classified
+    if (defined $unresolved && !%assignment) {
+        $assignment{"other"} = $unresolved;
     }
 
     # consolidate assignment
@@ -282,14 +290,11 @@ sub get_taxid_from_blastdb {
         return $cache_ref->{$entry};
     }
 
-    # %T returns taxid; suppress stderr
-    my $cmd = "blastdbcmd -db '$db_prefix' -entry '$entry' -outfmt '%T' 2>/dev/null";
-    my $taxid = `$cmd`;
-    chomp($taxid);
-
-    if (!defined $taxid || $taxid eq "" || $taxid !~ /^\d+$/) {
-        $taxid = undef;
-    }
+    # %T returns taxid; suppress stderr. A merged nt record (one sequence shared
+    # by several GIs) returns one line per GI, so ask for the target entry only
+    # and take the first valid taxid.
+    my $cmd = "blastdbcmd -db '$db_prefix' -entry '$entry' -target_only -outfmt '%T' 2>/dev/null";
+    my ($taxid) = grep { /^[1-9]\d*$/ } map { s/\s+//gr } split /\n/, `$cmd`;
 
     $cache_ref->{$entry} = $taxid;
     return $taxid;
