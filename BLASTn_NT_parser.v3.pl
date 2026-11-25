@@ -7,6 +7,7 @@ use Bio::DB::Taxonomy;
 use Bio::Tree::Tree;
 use File::Path qw(make_path);
 use File::Spec;
+use Fcntl qw(:flock);
 
 my $Usage = '
 Usage:
@@ -38,6 +39,16 @@ $outFile =~ s/blastn\.out/blastn.parsed/;
 $outFile = File::Spec->catfile($dir, $outFile);
 open(my $OUT, ">", $outFile) or die "cannot open $outFile: $!\n";
 
+# Bio::DB::Taxonomy creates index files on first use. Parser array jobs share
+# $HOME, so serialize initialization to prevent concurrent cache corruption.
+if (! -d $HOME) {
+    make_path($HOME) or die "cannot create $HOME: $!\n";
+}
+my $taxo_lock_file = File::Spec->catfile($HOME, "taxo.lock");
+open(my $taxo_lock, ">>", $taxo_lock_file)
+    or die "cannot open taxonomy lock $taxo_lock_file: $!\n";
+flock($taxo_lock, LOCK_EX) or die "cannot lock $taxo_lock_file: $!\n";
+
 # create a tmp taxonomy cache directory
 my $taxo_dir = File::Spec->catdir($HOME, "taxo");
 if (! -d $taxo_dir) {
@@ -51,6 +62,10 @@ my $dbh = Bio::DB::Taxonomy->new(
     -nodesfile => File::Spec->catfile($database_dir, "nodes.dmp"),
     -namesfile => File::Spec->catfile($database_dir, "names.dmp"),
 );
+
+flock($taxo_lock, LOCK_UN) or die "cannot unlock $taxo_lock_file: $!\n";
+close($taxo_lock)
+    or die "cannot close taxonomy lock $taxo_lock_file: $!\n";
 
 # Cache taxid lookups to avoid repeated blastdbcmd calls
 my %ENTRY2TAX;
